@@ -11,6 +11,7 @@ export default function GoalsPage() {
   const [localGoals, setLocalGoals] = useState<MonthlyGoals | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [editGoals, setEditGoals] = useState({
     gmcGoal: 21,
     buickGoal: 9,
@@ -19,21 +20,23 @@ export default function GoalsPage() {
     minVehiclesForBonus: 4,
   });
 
+  // Load local goals FIRST before API data
+  useEffect(() => {
+    const goals = getGoals();
+    setLocalGoals(goals);
+    setEditGoals({
+      gmcGoal: goals.gmcGoal,
+      buickGoal: goals.buickGoal,
+      usedGoal: goals.usedGoal,
+      bonusPerPerson: goals.bonusPerPerson,
+      minVehiclesForBonus: goals.minVehiclesForBonus,
+    });
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       const dashboardData = await fetchDashboardData();
       setData(dashboardData);
-
-      // Load local goals for editing
-      const goals = getGoals();
-      setLocalGoals(goals);
-      setEditGoals({
-        gmcGoal: dashboardData.goals.gmcNewGoal || goals.gmcGoal,
-        buickGoal: dashboardData.goals.buickNewGoal || goals.buickGoal,
-        usedGoal: dashboardData.goals.usedGoal || goals.usedGoal,
-        bonusPerPerson: goals.bonusPerPerson,
-        minVehiclesForBonus: goals.minVehiclesForBonus,
-      });
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -60,6 +63,8 @@ export default function GoalsPage() {
     saveGoals(updatedGoals);
     setLocalGoals(updatedGoals);
     setIsEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   if (loading || !data) {
@@ -75,10 +80,24 @@ export default function GoalsPage() {
     );
   }
 
-  // Calculate D2E status
+  // Use LOCAL goals for targets, API data for current sold numbers
+  const gmcGoal = editGoals.gmcGoal;
+  const buickGoal = editGoals.buickGoal;
+  const usedGoal = editGoals.usedGoal;
+
+  const gmcSold = data.dealership.gmcSold;
+  const buickSold = data.dealership.buickSold;
+  const usedSold = data.dealership.totalUsedUnits;
+
+  // Calculate progress using LOCAL goals
+  const gmcProgress = gmcGoal > 0 ? gmcSold / gmcGoal : 0;
+  const buickProgress = buickGoal > 0 ? buickSold / buickGoal : 0;
+  const usedProgress = usedGoal > 0 ? usedSold / usedGoal : 0;
+
+  // Calculate D2E status using LOCAL goals
   const bonusRequirements = {
-    gmcHit: data.dealership.gmcSold >= data.dealership.gmcGoal,
-    buickHit: data.dealership.buickSold >= data.dealership.buickGoal,
+    gmcHit: gmcSold >= gmcGoal,
+    buickHit: buickSold >= buickGoal,
   };
   const bothGoalsHit = bonusRequirements.gmcHit && bonusRequirements.buickHit;
 
@@ -91,16 +110,21 @@ export default function GoalsPage() {
             <h1 className="text-3xl font-bold tracking-tight">Monthly Goals</h1>
             <p className="text-[#888] mt-1">{data.monthName} | D2E Bonus Tracking</p>
           </div>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              isEditing
-                ? 'bg-[#888] text-white'
-                : 'bg-[#c41230] text-white hover:bg-[#9a0e26]'
-            }`}
-          >
-            {isEditing ? 'Cancel' : 'Edit Goals'}
-          </button>
+          <div className="flex items-center gap-4">
+            {saved && (
+              <span className="text-[#22c55e] font-medium animate-fade-in">Goals saved!</span>
+            )}
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                isEditing
+                  ? 'bg-[#888] text-white'
+                  : 'bg-[#c41230] text-white hover:bg-[#9a0e26]'
+              }`}
+            >
+              {isEditing ? 'Cancel' : 'Edit Goals'}
+            </button>
+          </div>
         </div>
 
         {/* D2E Status Banner */}
@@ -112,7 +136,7 @@ export default function GoalsPage() {
               </h2>
               <p className="text-[#888] mt-1">
                 {bothGoalsHit
-                  ? `Salespeople with 4+ new car units qualify for $${editGoals.bonusPerPerson} bonus!`
+                  ? `Salespeople with ${editGoals.minVehiclesForBonus}+ new car units qualify for $${editGoals.bonusPerPerson} bonus!`
                   : 'Must hit BOTH GMC and Buick goals to unlock D2E bonus'
                 }
               </p>
@@ -146,18 +170,18 @@ export default function GoalsPage() {
               )}
             </div>
             <div className="text-5xl font-bold mb-2">
-              {data.dealership.gmcSold}
-              <span className="text-2xl text-[#888]">/{isEditing ? editGoals.gmcGoal : data.dealership.gmcGoal}</span>
+              {gmcSold}
+              <span className="text-2xl text-[#888]">/{gmcGoal}</span>
             </div>
             <div className="progress-bar h-4 mb-3">
               <div
-                className={`progress-fill h-full gmc-gradient rounded-full ${data.dealership.gmcProgress >= 1 ? 'animate-pulse-glow' : ''}`}
-                style={{ width: `${Math.min(100, data.dealership.gmcProgress * 100)}%` }}
+                className={`progress-fill h-full gmc-gradient rounded-full ${gmcProgress >= 1 ? 'animate-pulse-glow' : ''}`}
+                style={{ width: `${Math.min(100, gmcProgress * 100)}%` }}
               />
             </div>
             <p className="text-[#888]">
-              {data.dealership.gmcRemaining > 0
-                ? `${data.dealership.gmcRemaining} more to hit goal`
+              {gmcGoal - gmcSold > 0
+                ? `${gmcGoal - gmcSold} more to hit goal`
                 : 'Goal achieved!'}
             </p>
           </div>
@@ -176,18 +200,18 @@ export default function GoalsPage() {
               )}
             </div>
             <div className="text-5xl font-bold mb-2">
-              {data.dealership.buickSold}
-              <span className="text-2xl text-[#888]">/{isEditing ? editGoals.buickGoal : data.dealership.buickGoal}</span>
+              {buickSold}
+              <span className="text-2xl text-[#888]">/{buickGoal}</span>
             </div>
             <div className="progress-bar h-4 mb-3">
               <div
-                className={`progress-fill h-full buick-gradient rounded-full ${data.dealership.buickProgress >= 1 ? 'animate-pulse-glow' : ''}`}
-                style={{ width: `${Math.min(100, data.dealership.buickProgress * 100)}%` }}
+                className={`progress-fill h-full buick-gradient rounded-full ${buickProgress >= 1 ? 'animate-pulse-glow' : ''}`}
+                style={{ width: `${Math.min(100, buickProgress * 100)}%` }}
               />
             </div>
             <p className="text-[#888]">
-              {data.dealership.buickRemaining > 0
-                ? `${data.dealership.buickRemaining} more to hit goal`
+              {buickGoal - buickSold > 0
+                ? `${buickGoal - buickSold} more to hit goal`
                 : 'Goal achieved!'}
             </p>
           </div>
@@ -206,18 +230,18 @@ export default function GoalsPage() {
               )}
             </div>
             <div className="text-5xl font-bold mb-2">
-              {data.dealership.totalUsedUnits}
-              <span className="text-2xl text-[#888]">/{isEditing ? editGoals.usedGoal : data.dealership.usedGoal}</span>
+              {usedSold}
+              <span className="text-2xl text-[#888]">/{usedGoal}</span>
             </div>
             <div className="progress-bar h-4 mb-3">
               <div
-                className={`progress-fill h-full bg-[#f59e0b] rounded-full ${data.dealership.usedProgress >= 1 ? 'animate-pulse-glow' : ''}`}
-                style={{ width: `${Math.min(100, data.dealership.usedProgress * 100)}%` }}
+                className={`progress-fill h-full bg-[#f59e0b] rounded-full ${usedProgress >= 1 ? 'animate-pulse-glow' : ''}`}
+                style={{ width: `${Math.min(100, usedProgress * 100)}%` }}
               />
             </div>
             <p className="text-[#888]">
-              {data.dealership.usedRemaining > 0
-                ? `${data.dealership.usedRemaining} more to hit goal`
+              {usedGoal - usedSold > 0
+                ? `${usedGoal - usedSold} more to hit goal`
                 : 'Goal achieved!'}
             </p>
           </div>
@@ -287,6 +311,7 @@ export default function GoalsPage() {
                     key={person.name}
                     person={person}
                     bonusAmount={editGoals.bonusPerPerson}
+                    minUnits={editGoals.minVehiclesForBonus}
                     goalsHit={bothGoalsHit}
                   />
                 ))}
@@ -298,12 +323,17 @@ export default function GoalsPage() {
           <div className="p-4 border-t border-[#2a2a2a] bg-[#1a1a1a]">
             <div className="flex items-center justify-between">
               <div className="text-[#888]">
-                <span className="text-white font-semibold">{data.dealership.bonusEligibleCount}</span> of {data.dealership.teamSize} salespeople eligible
+                <span className="text-white font-semibold">
+                  {data.salespeople.filter(sp => sp.newUnits >= editGoals.minVehiclesForBonus).length}
+                </span> of {data.salespeople.length} salespeople meet unit requirement
               </div>
               <div className="text-right">
                 <span className="text-[#888]">Total Bonus Payout:</span>
                 <span className="text-[#22c55e] text-2xl font-bold ml-3">
-                  ${(bothGoalsHit ? data.dealership.bonusEligibleCount * editGoals.bonusPerPerson : 0).toLocaleString()}
+                  ${(bothGoalsHit
+                    ? data.salespeople.filter(sp => sp.newUnits >= editGoals.minVehiclesForBonus).length * editGoals.bonusPerPerson
+                    : 0
+                  ).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -317,15 +347,17 @@ export default function GoalsPage() {
 function BonusRow({
   person,
   bonusAmount,
+  minUnits,
   goalsHit
 }: {
   person: SalespersonMetrics;
   bonusAmount: number;
+  minUnits: number;
   goalsHit: boolean;
 }) {
-  const meetsUnits = person.meetsMinUnits;
+  const meetsUnits = person.newUnits >= minUnits;
   const eligible = meetsUnits && goalsHit;
-  const progress = Math.min(100, (person.newUnits / person.d2eGoal) * 100);
+  const progress = Math.min(100, (person.newUnits / minUnits) * 100);
 
   return (
     <tr>
@@ -336,7 +368,7 @@ function BonusRow({
       <td className="text-center">
         <span className="text-2xl font-bold">{person.newUnits}</span>
       </td>
-      <td className="text-center text-[#888]">{person.d2eGoal}</td>
+      <td className="text-center text-[#888]">{minUnits}</td>
       <td className="text-center">
         <div className="w-full max-w-[120px] mx-auto">
           <div className="progress-bar h-2">
@@ -363,7 +395,7 @@ function BonusRow({
           )
         ) : (
           <span className="text-[#888] text-sm">
-            Need {person.d2eGoal - person.newUnits} more
+            Need {minUnits - person.newUnits} more
           </span>
         )}
       </td>
