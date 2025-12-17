@@ -73,7 +73,18 @@ export function getGoals(): MonthlyGoals {
   }
 
   try {
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored);
+    // Merge with defaults to ensure all fields exist
+    return {
+      ...defaultGoals,
+      ...parsed,
+      // Ensure these fields are always numbers
+      gmcGoal: Number(parsed.gmcGoal) || defaultGoals.gmcGoal,
+      buickGoal: Number(parsed.buickGoal) || defaultGoals.buickGoal,
+      usedGoal: Number(parsed.usedGoal) || defaultGoals.usedGoal,
+      bonusPerPerson: Number(parsed.bonusPerPerson) || defaultGoals.bonusPerPerson,
+      minVehiclesForBonus: Number(parsed.minVehiclesForBonus) || defaultGoals.minVehiclesForBonus,
+    };
   } catch {
     return defaultGoals;
   }

@@ -172,7 +172,8 @@ body {
   border: 2px solid var(--gmc-red);
   border-radius: 16px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  margin-top: 16px;
 }
 
 .spiff-card::before {
@@ -183,6 +184,7 @@ body {
   right: 0;
   height: 4px;
   background: linear-gradient(90deg, var(--gmc-red), var(--buick-gold));
+  border-radius: 16px 16px 0 0;
 }
 
 /* Input styles for edit mode */
