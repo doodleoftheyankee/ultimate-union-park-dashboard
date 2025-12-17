@@ -36,6 +36,7 @@ export interface MonthlyGoals {
   gmcCurrent: number;
   usedGoal: number;
   usedCurrent: number;
+  totalGrossGoal: number;
   bonusPerPerson: number;
   minVehiclesForBonus: number;
   lastUpdated: string;
