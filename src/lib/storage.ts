@@ -3,6 +3,7 @@ import { MonthlyGoals, SpiffCar } from '@/types';
 const GOALS_KEY = 'union-park-goals';
 const SPIFFS_KEY = 'union-park-spiffs';
 const SHEETS_CONFIG_KEY = 'union-park-sheets-config';
+const INDIVIDUAL_GOALS_KEY = 'union-park-individual-goals';
 
 // Default goals data
 const defaultGoals: MonthlyGoals = {
@@ -15,6 +16,7 @@ const defaultGoals: MonthlyGoals = {
   gmcCurrent: 0,
   usedGoal: 20,
   usedCurrent: 0,
+  totalGrossGoal: 150000,
   bonusPerPerson: 375,
   minVehiclesForBonus: 4,
   lastUpdated: new Date().toISOString(),
@@ -82,6 +84,7 @@ export function getGoals(): MonthlyGoals {
       gmcGoal: Number(parsed.gmcGoal) || defaultGoals.gmcGoal,
       buickGoal: Number(parsed.buickGoal) || defaultGoals.buickGoal,
       usedGoal: Number(parsed.usedGoal) || defaultGoals.usedGoal,
+      totalGrossGoal: Number(parsed.totalGrossGoal) || defaultGoals.totalGrossGoal,
       bonusPerPerson: Number(parsed.bonusPerPerson) || defaultGoals.bonusPerPerson,
       minVehiclesForBonus: Number(parsed.minVehiclesForBonus) || defaultGoals.minVehiclesForBonus,
     };
@@ -146,4 +149,43 @@ export function getSheetsConfig(): SheetsConfig {
 export function saveSheetsConfig(config: SheetsConfig): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(SHEETS_CONFIG_KEY, JSON.stringify(config));
+}
+
+// Individual salesperson goals
+export interface IndividualGoal {
+  name: string;
+  targetUnits: number;
+  targetProfit: number;
+  lastUpdated: string;
+}
+
+export function getIndividualGoals(): Record<string, IndividualGoal> {
+  if (typeof window === 'undefined') return {};
+
+  const stored = localStorage.getItem(INDIVIDUAL_GOALS_KEY);
+  if (!stored) return {};
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return {};
+  }
+}
+
+export function saveIndividualGoal(name: string, goal: Partial<IndividualGoal>): void {
+  if (typeof window === 'undefined') return;
+
+  const goals = getIndividualGoals();
+  goals[name] = {
+    name,
+    targetUnits: goal.targetUnits || 8,
+    targetProfit: goal.targetProfit || 15000,
+    lastUpdated: new Date().toISOString(),
+  };
+  localStorage.setItem(INDIVIDUAL_GOALS_KEY, JSON.stringify(goals));
+}
+
+export function getIndividualGoal(name: string): IndividualGoal | null {
+  const goals = getIndividualGoals();
+  return goals[name] || null;
 }

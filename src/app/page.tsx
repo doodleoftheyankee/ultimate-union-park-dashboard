@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import DashboardWrapper from '@/components/DashboardWrapper';
+import HotStreakTracker from '@/components/HotStreakTracker';
+import IndividualGoals from '@/components/IndividualGoals';
 import { fetchDashboardData, DashboardData, SalespersonMetrics } from '@/lib/sheets';
-import { getSheetsConfig } from '@/lib/storage';
+import { getSheetsConfig, getGoals } from '@/lib/storage';
 
 export default function SalesLeaderboard() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -13,6 +15,41 @@ export default function SalesLeaderboard() {
   const loadData = useCallback(async () => {
     try {
       const dashboardData = await fetchDashboardData();
+      const goals = getGoals();
+
+      // Override API goals with localStorage goals
+      if (dashboardData) {
+        dashboardData.dealership.gmcGoal = goals.gmcGoal;
+        dashboardData.dealership.buickGoal = goals.buickGoal;
+        dashboardData.dealership.usedGoal = goals.usedGoal;
+        dashboardData.dealership.totalGrossGoal = goals.totalGrossGoal;
+
+        // Recalculate progress and remaining
+        dashboardData.dealership.gmcProgress = dashboardData.dealership.gmcSold / goals.gmcGoal;
+        dashboardData.dealership.gmcRemaining = Math.max(0, goals.gmcGoal - dashboardData.dealership.gmcSold);
+        dashboardData.dealership.buickProgress = dashboardData.dealership.buickSold / goals.buickGoal;
+        dashboardData.dealership.buickRemaining = Math.max(0, goals.buickGoal - dashboardData.dealership.buickSold);
+        dashboardData.dealership.usedProgress = dashboardData.dealership.totalUsedUnits / goals.usedGoal;
+        dashboardData.dealership.usedRemaining = Math.max(0, goals.usedGoal - dashboardData.dealership.totalUsedUnits);
+
+        // Recalculate pace data
+        const daysRemaining = dashboardData.daysRemaining || 1;
+        dashboardData.pace.gmc.goal = goals.gmcGoal;
+        dashboardData.pace.gmc.needed = dashboardData.dealership.gmcRemaining;
+        dashboardData.pace.gmc.pacePerDay = dashboardData.dealership.gmcRemaining / daysRemaining;
+        dashboardData.pace.gmc.onTrack = dashboardData.dealership.gmcProgress >= dashboardData.percentComplete;
+
+        dashboardData.pace.buick.goal = goals.buickGoal;
+        dashboardData.pace.buick.needed = dashboardData.dealership.buickRemaining;
+        dashboardData.pace.buick.pacePerDay = dashboardData.dealership.buickRemaining / daysRemaining;
+        dashboardData.pace.buick.onTrack = dashboardData.dealership.buickProgress >= dashboardData.percentComplete;
+
+        dashboardData.pace.used.goal = goals.usedGoal;
+        dashboardData.pace.used.needed = dashboardData.dealership.usedRemaining;
+        dashboardData.pace.used.pacePerDay = dashboardData.dealership.usedRemaining / daysRemaining;
+        dashboardData.pace.used.onTrack = dashboardData.dealership.usedProgress >= dashboardData.percentComplete;
+      }
+
       setData(dashboardData);
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (error) {
@@ -67,6 +104,13 @@ export default function SalesLeaderboard() {
         {data.errorMessage && (
           <div className="mb-6 p-4 bg-[#f59e0b]/20 border border-[#f59e0b] rounded-lg text-[#f59e0b] text-center">
             {data.errorMessage}
+          </div>
+        )}
+
+        {/* Hot Streak Banner */}
+        {data.recentSales.length > 0 && (
+          <div className="mb-6">
+            <HotStreakTracker recentSales={data.recentSales} compact />
           </div>
         )}
 
@@ -212,6 +256,9 @@ export default function SalesLeaderboard() {
                 <PaceCard label="Used" data={data.pace.used} color="#f59e0b" />
               </div>
             </div>
+
+            {/* Individual Goals */}
+            <IndividualGoals salespeople={data.salespeople} editable />
 
             {/* Recent Sales */}
             <div className="dashboard-card p-6">
