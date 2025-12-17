@@ -22,6 +22,7 @@ export default function Navigation({
     { href: '/', label: 'Sales Leaderboard', icon: '📊' },
     { href: '/goals', label: 'Monthly Goals', icon: '🎯' },
     { href: '/spiffs', label: 'Spiff Cars', icon: '🚗' },
+    { href: '/manager', label: 'Manager', icon: '👔' },
   ];
 
   return (
