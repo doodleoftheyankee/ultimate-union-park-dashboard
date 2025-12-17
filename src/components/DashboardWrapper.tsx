@@ -3,8 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Navigation from './Navigation';
+import DealTicker from './DealTicker';
+import Celebration, { useGoalCelebration } from './Celebration';
+import { fetchDashboardData, RecentSale } from '@/lib/sheets';
+import { getGoals, getSheetsConfig } from '@/lib/storage';
 
-const PAGES = ['/', '/goals', '/spiffs'];
+const PAGES = ['/', '/goals', '/spiffs', '/manager'];
 const ROTATE_INTERVAL = 15000; // 15 seconds per page
 
 interface DashboardWrapperProps {
@@ -16,6 +20,37 @@ export default function DashboardWrapper({ children }: DashboardWrapperProps) {
   const pathname = usePathname();
   const [isAutoRotate, setIsAutoRotate] = useState(false);
   const [isTVMode, setIsTVMode] = useState(false);
+  const [recentDeals, setRecentDeals] = useState<RecentSale[]>([]);
+  const [goalStatus, setGoalStatus] = useState({ gmcHit: false, buickHit: false, usedHit: false });
+
+  // Fetch data for deal ticker and goal tracking
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await fetchDashboardData();
+        const goals = getGoals();
+
+        if (data) {
+          setRecentDeals(data.recentSales || []);
+          setGoalStatus({
+            gmcHit: data.dealership.gmcSold >= (goals.gmcGoal || 21),
+            buickHit: data.dealership.buickSold >= (goals.buickGoal || 9),
+            usedHit: data.dealership.totalUsedUnits >= (goals.usedGoal || 20),
+          });
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      }
+    };
+
+    loadData();
+    const config = getSheetsConfig();
+    const interval = setInterval(loadData, config.refreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Track goal celebrations
+  const { celebration, clearCelebration } = useGoalCelebration(goalStatus);
 
   // Handle auto-rotation
   useEffect(() => {
@@ -83,15 +118,25 @@ export default function DashboardWrapper({ children }: DashboardWrapperProps) {
         {children}
       </main>
 
+      {/* Deal Ticker */}
+      {recentDeals.length > 0 && <DealTicker deals={recentDeals} />}
+
+      {/* Celebration Animation */}
+      <Celebration
+        trigger={celebration.active}
+        message={celebration.message}
+        onComplete={clearCelebration}
+      />
+
       {/* Auto-rotate indicator */}
       {isAutoRotate && (
-        <div className="fixed bottom-4 right-4 bg-[#22c55e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+        <div className="fixed bottom-14 right-4 bg-[#22c55e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse z-50">
           Auto-rotating...
         </div>
       )}
 
       {/* Footer with current time */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/90 backdrop-blur-sm border-t border-[#2a2a2a] py-2 px-6">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/90 backdrop-blur-sm border-t border-[#2a2a2a] py-2 px-6 z-30">
         <div className="max-w-[1920px] mx-auto flex items-center justify-between text-sm text-[#888]">
           <span>UNION PARK BUICK GMC | Professional Grade Dashboard</span>
           <CurrentTime />
