@@ -205,7 +205,9 @@ export default function SalesLeaderboard() {
                     <th className="text-center">New</th>
                     <th className="text-center">Used</th>
                     <th className="text-center">Total</th>
-                    <th className="text-right">Profit</th>
+                    <th className="text-right">Front</th>
+                    <th className="text-right">Back</th>
+                    <th className="text-right">Total $</th>
                     <th className="text-center">Bonus</th>
                   </tr>
                 </thead>
@@ -237,6 +239,14 @@ export default function SalesLeaderboard() {
                   <span className="text-xl font-semibold">{data.dealership.totalUsedUnits}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-[#2a2a2a]">
+                  <span className="text-[#888]">Total Front End</span>
+                  <span className="text-xl font-semibold text-[#3b82f6]">${(data.dealership.totalFrontEnd || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-[#2a2a2a]">
+                  <span className="text-[#888]">Total Back End</span>
+                  <span className="text-xl font-semibold text-[#8b5cf6]">${(data.dealership.totalBackEnd || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-[#2a2a2a]">
                   <span className="text-[#888]">Avg Profit/Unit</span>
                   <span className="text-xl font-semibold text-[#22c55e]">${Math.round(data.dealership.avgProfit).toLocaleString()}</span>
                 </div>
@@ -263,17 +273,21 @@ export default function SalesLeaderboard() {
             {/* Recent Sales */}
             <div className="dashboard-card p-6">
               <h3 className="text-lg font-semibold mb-4">Recent Sales</h3>
-              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
                 {data.recentSales.slice(0, 5).map((sale, index) => (
                   <div key={index} className="p-3 bg-[#1a1a1a] rounded-lg">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm">{sale.year} {sale.make} {sale.model}</span>
                       <span className="text-[#22c55e] font-semibold">${sale.totalProfit.toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center justify-between mt-1 text-xs text-[#888]">
-                      <span>{sale.salesPerson}</span>
-                      <span>#{sale.stockNumber}</span>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-[#888]">{sale.salesPerson}</span>
+                      <div className="flex gap-2 text-xs">
+                        <span className="text-[#3b82f6]">F: ${(sale.frontEndProfit || 0).toLocaleString()}</span>
+                        <span className="text-[#8b5cf6]">B: ${(sale.backEndProfit || 0).toLocaleString()}</span>
+                      </div>
                     </div>
+                    <div className="text-xs text-[#888] mt-1">#{sale.stockNumber}</div>
                   </div>
                 ))}
               </div>
@@ -318,6 +332,12 @@ function SalespersonRow({ person, rank }: { person: SalespersonMetrics; rank: nu
       </td>
       <td className="text-center">
         <span className="text-xl font-bold">{person.totalUnits}</span>
+      </td>
+      <td className="text-right">
+        <span className="text-[#3b82f6] font-semibold">${(person.frontEndProfit || 0).toLocaleString()}</span>
+      </td>
+      <td className="text-right">
+        <span className="text-[#8b5cf6] font-semibold">${(person.backEndProfit || 0).toLocaleString()}</span>
       </td>
       <td className="text-right">
         <span className="text-[#22c55e] font-semibold">${person.totalProfit.toLocaleString()}</span>
