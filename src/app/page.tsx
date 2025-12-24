@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import DashboardWrapper from '@/components/DashboardWrapper';
 import HotStreakTracker from '@/components/HotStreakTracker';
 import IndividualGoals from '@/components/IndividualGoals';
-import BestSellingModels from '@/components/BestSellingModels';
 import HeadToHead from '@/components/HeadToHead';
-import WeeklyContest from '@/components/WeeklyContest';
 import { fetchDashboardData, DashboardData, SalespersonMetrics } from '@/lib/sheets';
 import { getSheetsConfig, getGoals } from '@/lib/storage';
 
@@ -377,18 +375,8 @@ export default function SalesLeaderboard() {
               </div>
             </div>
 
-            {/* Weekly Contest */}
-            <WeeklyContest
-              salespeople={data.salespeople}
-              recentSales={data.recentSales}
-              bonusAmount={250}
-            />
-
             {/* Head-to-Head Battles */}
             <HeadToHead salespeople={data.salespeople} />
-
-            {/* Best Selling Models */}
-            <BestSellingModels recentSales={data.recentSales} />
 
             {/* Individual Goals */}
             <IndividualGoals salespeople={data.salespeople} editable />

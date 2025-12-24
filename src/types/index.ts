@@ -62,3 +62,17 @@ export interface DashboardState {
   isTVMode: boolean;
   lastRefresh: string;
 }
+
+// Weekly Contest types
+export interface WeeklyContestConfig {
+  id: string;
+  name: string;
+  description: string;
+  bonusAmount: number;
+  metric: 'units' | 'gross' | 'frontEnd' | 'backEnd';
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  winner?: string;
+  createdAt: string;
+}

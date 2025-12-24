@@ -1,9 +1,10 @@
-import { MonthlyGoals, SpiffCar } from '@/types';
+import { MonthlyGoals, SpiffCar, WeeklyContestConfig } from '@/types';
 
 const GOALS_KEY = 'union-park-goals';
 const SPIFFS_KEY = 'union-park-spiffs';
 const SHEETS_CONFIG_KEY = 'union-park-sheets-config';
 const INDIVIDUAL_GOALS_KEY = 'union-park-individual-goals';
+const CONTESTS_KEY = 'union-park-contests';
 
 // Default goals data
 const defaultGoals: MonthlyGoals = {
@@ -188,4 +189,64 @@ export function saveIndividualGoal(name: string, goal: Partial<IndividualGoal>):
 export function getIndividualGoal(name: string): IndividualGoal | null {
   const goals = getIndividualGoals();
   return goals[name] || null;
+}
+
+// Contest storage functions
+const defaultContests: WeeklyContestConfig[] = [
+  {
+    id: '1',
+    name: 'Weekly Unit Leader',
+    description: 'Most units sold this week wins!',
+    bonusAmount: 250,
+    metric: 'units',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export function getContests(): WeeklyContestConfig[] {
+  if (typeof window === 'undefined') return defaultContests;
+
+  const stored = localStorage.getItem(CONTESTS_KEY);
+  if (!stored) {
+    saveContests(defaultContests);
+    return defaultContests;
+  }
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return defaultContests;
+  }
+}
+
+export function saveContests(contests: WeeklyContestConfig[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(CONTESTS_KEY, JSON.stringify(contests));
+}
+
+export function addContest(contest: Omit<WeeklyContestConfig, 'id' | 'createdAt'>): WeeklyContestConfig {
+  const newContest: WeeklyContestConfig = {
+    ...contest,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+  };
+  const contests = getContests();
+  contests.push(newContest);
+  saveContests(contests);
+  return newContest;
+}
+
+export function updateContest(id: string, updates: Partial<WeeklyContestConfig>): void {
+  const contests = getContests();
+  const index = contests.findIndex(c => c.id === id);
+  if (index !== -1) {
+    contests[index] = { ...contests[index], ...updates };
+    saveContests(contests);
+  }
+}
+
+export function deleteContest(id: string): void {
+  const contests = getContests().filter(c => c.id !== id);
+  saveContests(contests);
 }
