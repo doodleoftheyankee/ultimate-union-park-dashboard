@@ -97,6 +97,24 @@ export default function SalesLeaderboard() {
   // Sort salespeople by total units
   const sortedSalespeople = [...data.salespeople].sort((a, b) => b.totalUnits - a.totalUnits);
 
+  // Find top grosser (by total profit)
+  const topGrosser = [...data.salespeople].sort((a, b) => b.totalProfit - a.totalProfit)[0]?.name;
+
+  // Calculate today's deals
+  const today = new Date().toISOString().split('T')[0];
+  const todaysDeals = data.recentSales.filter(sale => sale.date === today).length;
+  const todaysGross = data.recentSales
+    .filter(sale => sale.date === today)
+    .reduce((sum, sale) => sum + sale.totalProfit, 0);
+
+  // Calculate average front/back per unit
+  const avgFrontPerUnit = data.dealership.totalUnits > 0
+    ? Math.round((data.dealership.totalFrontEnd || 0) / data.dealership.totalUnits)
+    : 0;
+  const avgBackPerUnit = data.dealership.totalUnits > 0
+    ? Math.round((data.dealership.totalBackEnd || 0) / data.dealership.totalUnits)
+    : 0;
+
   return (
     <DashboardWrapper>
       <div className="max-w-[1920px] mx-auto px-6 py-8 pb-20">
@@ -125,6 +143,23 @@ export default function SalesLeaderboard() {
             <button onClick={loadData} className="text-[#c41230] hover:underline">Refresh</button>
           </div>
         </div>
+
+        {/* Today's Deals Banner */}
+        {todaysDeals > 0 && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-[#22c55e]/20 to-[#22c55e]/5 border border-[#22c55e]/50 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">🔥</div>
+              <div>
+                <div className="text-lg font-bold text-[#22c55e]">{todaysDeals} Deal{todaysDeals !== 1 ? 's' : ''} Today!</div>
+                <div className="text-sm text-[#888]">${todaysGross.toLocaleString()} in gross profit</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-black text-[#22c55e]">${todaysGross.toLocaleString()}</div>
+              <div className="text-xs text-[#888]">Avg: ${todaysDeals > 0 ? Math.round(todaysGross / todaysDeals).toLocaleString() : 0}/deal</div>
+            </div>
+          </div>
+        )}
 
         {/* Top Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -189,6 +224,65 @@ export default function SalesLeaderboard() {
           </div>
         </div>
 
+        {/* Month Projection Card */}
+        <div className="mb-8">
+          <div className="dashboard-card p-6 bg-gradient-to-r from-[#1a1a1a] to-[#0d0d0d]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold uppercase tracking-wide text-[#888]">Month-End Projection</h3>
+              <span className="text-xs text-[#888]">Based on {data.daysElapsed} day{data.daysElapsed !== 1 ? 's' : ''} of data</span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Projected Units */}
+              <div className="text-center">
+                <div className="text-xs text-[#888] uppercase mb-1">Projected Units</div>
+                <div className={`text-3xl font-black ${
+                  Math.round((data.dealership.totalUnits / data.daysElapsed) * data.daysInMonth) >=
+                  (data.dealership.gmcGoal + data.dealership.buickGoal + data.dealership.usedGoal)
+                    ? 'text-[#22c55e]' : 'text-[#f59e0b]'
+                }`}>
+                  {Math.round((data.dealership.totalUnits / data.daysElapsed) * data.daysInMonth)}
+                </div>
+                <div className="text-xs text-[#888] mt-1">
+                  {(data.dealership.totalUnits / data.daysElapsed).toFixed(1)} units/day
+                </div>
+              </div>
+              {/* Projected Gross */}
+              <div className="text-center">
+                <div className="text-xs text-[#888] uppercase mb-1">Projected Gross</div>
+                <div className={`text-3xl font-black ${
+                  Math.round((data.dealership.totalProfit / data.daysElapsed) * data.daysInMonth) >= data.dealership.totalGrossGoal
+                    ? 'text-[#22c55e]' : 'text-[#f59e0b]'
+                }`}>
+                  ${Math.round((data.dealership.totalProfit / data.daysElapsed) * data.daysInMonth).toLocaleString()}
+                </div>
+                <div className="text-xs text-[#888] mt-1">
+                  ${Math.round(data.dealership.totalProfit / data.daysElapsed).toLocaleString()}/day
+                </div>
+              </div>
+              {/* Daily Run Rate */}
+              <div className="text-center">
+                <div className="text-xs text-[#888] uppercase mb-1">Daily Run Rate</div>
+                <div className="text-3xl font-black text-white">
+                  {(data.dealership.totalUnits / data.daysElapsed).toFixed(1)}
+                </div>
+                <div className="text-xs text-[#888] mt-1">
+                  Need {((data.dealership.gmcGoal + data.dealership.buickGoal + data.dealership.usedGoal - data.dealership.totalUnits) / data.daysRemaining).toFixed(1)}/day
+                </div>
+              </div>
+              {/* Month Progress */}
+              <div className="text-center">
+                <div className="text-xs text-[#888] uppercase mb-1">Month Progress</div>
+                <div className="text-3xl font-black text-white">
+                  {Math.round(data.percentComplete * 100)}%
+                </div>
+                <div className="text-xs text-[#888] mt-1">
+                  {data.daysRemaining} day{data.daysRemaining !== 1 ? 's' : ''} remaining
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Leaderboard Table */}
@@ -213,7 +307,12 @@ export default function SalesLeaderboard() {
                 </thead>
                 <tbody>
                   {sortedSalespeople.map((person, index) => (
-                    <SalespersonRow key={person.name} person={person} rank={index + 1} />
+                    <SalespersonRow
+                      key={person.name}
+                      person={person}
+                      rank={index + 1}
+                      isTopGrosser={person.name === topGrosser}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -247,7 +346,15 @@ export default function SalesLeaderboard() {
                   <span className="text-xl font-semibold text-[#8b5cf6]">${(data.dealership.totalBackEnd || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-[#2a2a2a]">
-                  <span className="text-[#888]">Avg Profit/Unit</span>
+                  <span className="text-[#888]">Avg Front/Unit</span>
+                  <span className="text-xl font-semibold text-[#3b82f6]">${avgFrontPerUnit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-[#2a2a2a]">
+                  <span className="text-[#888]">Avg Back/Unit</span>
+                  <span className="text-xl font-semibold text-[#8b5cf6]">${avgBackPerUnit.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-[#2a2a2a]">
+                  <span className="text-[#888]">Avg Total/Unit</span>
                   <span className="text-xl font-semibold text-[#22c55e]">${Math.round(data.dealership.avgProfit).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
@@ -299,7 +406,7 @@ export default function SalesLeaderboard() {
   );
 }
 
-function SalespersonRow({ person, rank }: { person: SalespersonMetrics; rank: number }) {
+function SalespersonRow({ person, rank, isTopGrosser }: { person: SalespersonMetrics; rank: number; isTopGrosser?: boolean }) {
   const getRankClass = () => {
     if (rank === 1) return 'rank-1';
     if (rank === 2) return 'rank-2';
@@ -311,12 +418,17 @@ function SalespersonRow({ person, rank }: { person: SalespersonMetrics; rank: nu
     <tr className="animate-fade-in" style={{ animationDelay: `${rank * 50}ms` }}>
       <td>
         <div className={`rank-badge ${getRankClass()}`}>
-          {rank}
+          {rank === 1 ? '👑' : rank}
         </div>
       </td>
       <td>
         <div>
-          <div className="font-semibold">{person.nickname}</div>
+          <div className="font-semibold flex items-center gap-2">
+            {person.nickname}
+            {isTopGrosser && rank !== 1 && (
+              <span className="text-[#c5a04f] text-xs" title="Top Grosser">💰</span>
+            )}
+          </div>
           <div className="text-xs text-[#888]">
             <span className="text-[#c41230]">{person.gmcUnits} GMC</span>
             <span className="mx-1">|</span>
