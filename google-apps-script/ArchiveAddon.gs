@@ -1,12 +1,25 @@
 // ============================================
 // ARCHIVE ADD-ON - Paste this at the END of your existing Code.gs
 // ============================================
+//
+// IMPORTANT: After pasting, find your existing onOpen() function
+// and add this line inside it:
+//
+//   addArchiveMenu_();
+//
+// Example:
+//   function onOpen() {
+//     // ... your existing menu code ...
+//     addArchiveMenu_();  // <-- ADD THIS LINE
+//   }
+//
+// ============================================
 
 /**
- * Adds Archive menu to your spreadsheet
- * This extends your existing onOpen if you have one
+ * Call this from your existing onOpen() function
+ * Adds Archive submenu to your spreadsheet
  */
-function onOpen() {
+function addArchiveMenu_() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('📁 Archive')
     .addItem('Archive Current Month', 'archiveCurrentMonth_')
