@@ -5,6 +5,7 @@ const SPIFFS_KEY = 'union-park-spiffs';
 const SHEETS_CONFIG_KEY = 'union-park-sheets-config';
 const INDIVIDUAL_GOALS_KEY = 'union-park-individual-goals';
 const CONTESTS_KEY = 'union-park-contests';
+const CELEBRATED_GOALS_KEY = 'union-park-celebrated-goals';
 
 // Default goals data
 const defaultGoals: MonthlyGoals = {
@@ -249,4 +250,70 @@ export function updateContest(id: string, updates: Partial<WeeklyContestConfig>)
 export function deleteContest(id: string): void {
   const contests = getContests().filter(c => c.id !== id);
   saveContests(contests);
+}
+
+// Celebrated goals tracking - prevents celebrations from showing repeatedly
+export interface CelebratedGoals {
+  monthKey: string; // Format: "YYYY-MM" to reset celebrations each month
+  gmcCelebrated: boolean;
+  buickCelebrated: boolean;
+  usedCelebrated: boolean;
+  d2eCelebrated: boolean;
+}
+
+function getCurrentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function getCelebratedGoals(): CelebratedGoals {
+  const currentMonthKey = getCurrentMonthKey();
+  const defaultCelebrated: CelebratedGoals = {
+    monthKey: currentMonthKey,
+    gmcCelebrated: false,
+    buickCelebrated: false,
+    usedCelebrated: false,
+    d2eCelebrated: false,
+  };
+
+  if (typeof window === 'undefined') return defaultCelebrated;
+
+  const stored = localStorage.getItem(CELEBRATED_GOALS_KEY);
+  if (!stored) return defaultCelebrated;
+
+  try {
+    const parsed = JSON.parse(stored) as CelebratedGoals;
+    // Reset if it's a new month
+    if (parsed.monthKey !== currentMonthKey) {
+      saveCelebratedGoals(defaultCelebrated);
+      return defaultCelebrated;
+    }
+    return parsed;
+  } catch {
+    return defaultCelebrated;
+  }
+}
+
+export function saveCelebratedGoals(celebrated: CelebratedGoals): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(CELEBRATED_GOALS_KEY, JSON.stringify(celebrated));
+}
+
+export function markGoalCelebrated(goal: 'gmc' | 'buick' | 'used' | 'd2e'): void {
+  const celebrated = getCelebratedGoals();
+  switch (goal) {
+    case 'gmc':
+      celebrated.gmcCelebrated = true;
+      break;
+    case 'buick':
+      celebrated.buickCelebrated = true;
+      break;
+    case 'used':
+      celebrated.usedCelebrated = true;
+      break;
+    case 'd2e':
+      celebrated.d2eCelebrated = true;
+      break;
+  }
+  saveCelebratedGoals(celebrated);
 }
