@@ -59,7 +59,7 @@ function runArchive_(year, month) {
   var archiveSheet = ss.getSheetByName('Archive');
   if (!archiveSheet) {
     archiveSheet = ss.insertSheet('Archive');
-    setupTwoCharts_(archiveSheet);
+    setupThreeCharts_(archiveSheet);
   }
 
   var newData = newSheet.getDataRange().getValues();
@@ -94,26 +94,22 @@ function runArchive_(year, month) {
   }
   var usedTotal = usedFront + usedBack;
 
+  // Calculate COMBINED
   var combinedUnits = newUnits + usedUnits;
+  var combinedFront = newFront + usedFront;
+  var combinedBack = newBack + usedBack;
+  var combinedGross = newTotal + usedTotal;
+
   var monthName = getMonthName_(month) + ' ' + year;
   var monthKey = year + '-' + String(month).padStart(2, '0');
 
-  // Find existing row or get next row for NEW table (starts at row 4)
-  var newTableStart = 4;
-  var lastNewRow = findLastDataRow_(archiveSheet, 1, newTableStart);
-  var existingNewRow = findMonthRow_(archiveSheet, 1, newTableStart, lastNewRow, monthKey);
-  var newRow = existingNewRow > 0 ? existingNewRow : lastNewRow + 1;
+  // Find existing row or get next row (starts at row 4)
+  var dataStart = 4;
+  var lastRow = findLastDataRow_(archiveSheet, 1, dataStart);
+  var existingRow = findMonthRow_(archiveSheet, 1, dataStart, lastRow, monthKey);
+  var dataRow = existingRow > 0 ? existingRow : lastRow + 1;
 
-  // Find existing row or get next row for USED table (starts at row 4)
-  var usedTableCol = 9; // Column I
-  var lastUsedRow = findLastDataRow_(archiveSheet, usedTableCol, newTableStart);
-  var existingUsedRow = findMonthRow_(archiveSheet, usedTableCol, newTableStart, lastUsedRow, monthKey);
-  var usedRow = existingUsedRow > 0 ? existingUsedRow : lastUsedRow + 1;
-
-  // Make sure both tables stay aligned (same row)
-  var dataRow = Math.max(newRow, usedRow);
-
-  // Write NEW CARS data (columns A-G)
+  // Write NEW CARS data (columns A-J)
   var newRowData = [
     monthKey,                                    // A: Key (hidden)
     new Date().toLocaleDateString(),             // B: Date
@@ -137,10 +133,20 @@ function runArchive_(year, month) {
     usedUnits >= USED_GOAL ? 'MET' : 'NOT MET', // O: Status
     usedFront,                                   // P: Front End
     usedBack,                                    // Q: Back End
-    usedTotal,                                   // R: Total
-    combinedUnits                                // S: Combined Units
+    usedTotal                                    // R: Total
   ];
   archiveSheet.getRange(dataRow, usedColStart, 1, usedRowData.length).setValues([usedRowData]);
+
+  // Write COMBINED data (columns T-X)
+  var combinedColStart = 20; // Column T
+  var combinedRowData = [
+    monthName,                                   // T: Month
+    combinedUnits,                               // U: Total Units
+    combinedFront,                               // V: Total Front End
+    combinedBack,                                // W: Total Back End
+    combinedGross                                // X: Total Gross
+  ];
+  archiveSheet.getRange(dataRow, combinedColStart, 1, combinedRowData.length).setValues([combinedRowData]);
 
   // Format the row
   formatDataRow_(archiveSheet, dataRow);
@@ -148,19 +154,15 @@ function runArchive_(year, month) {
   archiveSheet.activate();
 
   ui.alert('✅ ' + monthName + ' Archived!\n\n' +
-    'NEW CARS:\n' +
-    '  GMC: ' + gmcUnits + '/' + GMC_GOAL + (gmcUnits >= GMC_GOAL ? ' ✓' : '') + '\n' +
-    '  Buick: ' + buickUnits + '/' + BUICK_GOAL + (buickUnits >= BUICK_GOAL ? ' ✓' : '') + '\n' +
-    '  Gross: $' + newTotal.toLocaleString() + '\n\n' +
-    'USED CARS:\n' +
-    '  Units: ' + usedUnits + '/' + USED_GOAL + (usedUnits >= USED_GOAL ? ' ✓' : '') + '\n' +
-    '  Gross: $' + usedTotal.toLocaleString() + '\n\n' +
-    'COMBINED: ' + combinedUnits + ' units');
+    'NEW: GMC ' + gmcUnits + ' | Buick ' + buickUnits + '\n' +
+    'USED: ' + usedUnits + ' units\n\n' +
+    'COMBINED:\n' +
+    '  Units: ' + combinedUnits + '\n' +
+    '  Gross: $' + combinedGross.toLocaleString());
 }
 
-function setupTwoCharts_(sheet) {
-  // ===== NEW CARS SECTION (Columns A-J) =====
-  // Title row
+function setupThreeCharts_(sheet) {
+  // ===== NEW CARS (Columns A-J) =====
   sheet.getRange(1, 1, 1, 10).merge()
     .setValue('🚗 NEW CARS')
     .setBackground('#2563eb')
@@ -169,25 +171,22 @@ function setupTwoCharts_(sheet) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // Goals row
   sheet.getRange(2, 1, 1, 10).merge()
     .setValue('GMC Goal: ' + GMC_GOAL + '  |  Buick Goal: ' + BUICK_GOAL)
     .setBackground('#dbeafe')
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // Headers row
   var newHeaders = ['Key', 'Date', 'Month', 'GMC Sold', 'GMC', 'Buick Sold', 'Buick', 'Front End', 'Back End', 'Total'];
   sheet.getRange(3, 1, 1, newHeaders.length).setValues([newHeaders])
     .setBackground('#1e3a5f')
     .setFontColor('#ffffff')
     .setFontWeight('bold');
 
-  // ===== USED CARS SECTION (Columns L-S) =====
-  var usedStart = 12; // Column L
+  // ===== USED CARS (Columns L-R) =====
+  var usedStart = 12;
 
-  // Title row
-  sheet.getRange(1, usedStart, 1, 8).merge()
+  sheet.getRange(1, usedStart, 1, 7).merge()
     .setValue('🚙 USED CARS')
     .setBackground('#7c3aed')
     .setFontColor('#ffffff')
@@ -195,43 +194,67 @@ function setupTwoCharts_(sheet) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // Goals row
-  sheet.getRange(2, usedStart, 1, 8).merge()
+  sheet.getRange(2, usedStart, 1, 7).merge()
     .setValue('Used Goal: ' + USED_GOAL)
     .setBackground('#ede9fe')
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // Headers row
-  var usedHeaders = ['Key', 'Month', 'Units Sold', 'Status', 'Front End', 'Back End', 'Total', 'Combined'];
+  var usedHeaders = ['Key', 'Month', 'Units Sold', 'Status', 'Front End', 'Back End', 'Total'];
   sheet.getRange(3, usedStart, 1, usedHeaders.length).setValues([usedHeaders])
     .setBackground('#4c1d95')
     .setFontColor('#ffffff')
     .setFontWeight('bold');
 
-  // Gap column (K)
-  sheet.setColumnWidth(11, 30);
+  // ===== COMBINED TOTALS (Columns T-X) =====
+  var combStart = 20;
+
+  sheet.getRange(1, combStart, 1, 5).merge()
+    .setValue('📊 COMBINED TOTALS')
+    .setBackground('#059669')
+    .setFontColor('#ffffff')
+    .setFontSize(14)
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  sheet.getRange(2, combStart, 1, 5).merge()
+    .setValue('New + Used')
+    .setBackground('#d1fae5')
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
+
+  var combHeaders = ['Month', 'Total Units', 'Total Front', 'Total Back', 'Total Gross'];
+  sheet.getRange(3, combStart, 1, combHeaders.length).setValues([combHeaders])
+    .setBackground('#065f46')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold');
+
+  // Gap columns
+  sheet.setColumnWidth(11, 20); // K
+  sheet.setColumnWidth(19, 20); // S
   sheet.getRange(1, 11, 3, 1).setBackground('#f3f4f6');
+  sheet.getRange(1, 19, 3, 1).setBackground('#f3f4f6');
 
   // Hide key columns
-  sheet.hideColumns(1);  // Column A
-  sheet.hideColumns(12); // Column L
+  sheet.hideColumns(1);  // A
+  sheet.hideColumns(12); // L
 
   // Freeze header rows
   sheet.setFrozenRows(3);
 
   // Set column widths
-  for (var c = 2; c <= 10; c++) sheet.setColumnWidth(c, 90);
-  for (var d = 13; d <= 19; d++) sheet.setColumnWidth(d, 90);
+  for (var c = 2; c <= 10; c++) sheet.setColumnWidth(c, 85);
+  for (var d = 13; d <= 18; d++) sheet.setColumnWidth(d, 85);
+  for (var e = 20; e <= 24; e++) sheet.setColumnWidth(e, 90);
 }
 
 function formatDataRow_(sheet, row) {
-  // NEW section currency (columns H, I, J = 8, 9, 10)
+  // NEW: Currency (H, I, J)
   sheet.getRange(row, 8).setNumberFormat('$#,##0');
   sheet.getRange(row, 9).setNumberFormat('$#,##0');
   sheet.getRange(row, 10).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#dbeafe');
 
-  // NEW GMC status (column E = 5)
+  // NEW: GMC status (E)
   var gmcCell = sheet.getRange(row, 5);
   if (gmcCell.getValue() === 'MET') {
     gmcCell.setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
@@ -239,7 +262,7 @@ function formatDataRow_(sheet, row) {
     gmcCell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
   }
 
-  // NEW Buick status (column G = 7)
+  // NEW: Buick status (G)
   var buickCell = sheet.getRange(row, 7);
   if (buickCell.getValue() === 'MET') {
     buickCell.setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
@@ -247,41 +270,41 @@ function formatDataRow_(sheet, row) {
     buickCell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
   }
 
-  // USED section currency (columns O, P, Q = 15, 16, 17)
-  sheet.getRange(row, 15).setNumberFormat('$#,##0');
+  // USED: Currency (P, Q, R = 16, 17, 18)
   sheet.getRange(row, 16).setNumberFormat('$#,##0');
-  sheet.getRange(row, 17).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#ede9fe');
+  sheet.getRange(row, 17).setNumberFormat('$#,##0');
+  sheet.getRange(row, 18).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#ede9fe');
 
-  // USED status (column N = 14)
-  var usedCell = sheet.getRange(row, 14);
+  // USED: Status (O = 15)
+  var usedCell = sheet.getRange(row, 15);
   if (usedCell.getValue() === 'MET') {
     usedCell.setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
   } else {
     usedCell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
   }
 
-  // Combined units (column S = 19)
-  sheet.getRange(row, 19).setFontWeight('bold').setBackground('#fef3c7');
+  // COMBINED: Units (U = 21) highlighted
+  sheet.getRange(row, 21).setFontWeight('bold').setBackground('#fef3c7');
+
+  // COMBINED: Currency (V, W, X = 22, 23, 24)
+  sheet.getRange(row, 22).setNumberFormat('$#,##0');
+  sheet.getRange(row, 23).setNumberFormat('$#,##0');
+  sheet.getRange(row, 24).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#d1fae5');
 }
 
 function findLastDataRow_(sheet, col, startRow) {
   var lastRow = sheet.getLastRow();
   if (lastRow < startRow) return startRow - 1;
-
   for (var r = lastRow; r >= startRow; r--) {
-    var val = sheet.getRange(r, col).getValue();
-    if (val !== '') return r;
+    if (sheet.getRange(r, col).getValue() !== '') return r;
   }
   return startRow - 1;
 }
 
 function findMonthRow_(sheet, col, startRow, endRow, monthKey) {
   if (endRow < startRow) return -1;
-
   for (var r = startRow; r <= endRow; r++) {
-    if (sheet.getRange(r, col).getValue() === monthKey) {
-      return r;
-    }
+    if (sheet.getRange(r, col).getValue() === monthKey) return r;
   }
   return -1;
 }
