@@ -14,6 +14,7 @@ export default function HistoryPage() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveNotes, setArchiveNotes] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [archiveMode, setArchiveMode] = useState<'current' | 'previous'>('current');
 
   const loadData = useCallback(async () => {
     try {
@@ -32,12 +33,31 @@ export default function HistoryPage() {
     loadData();
   }, [loadData]);
 
-  const handleArchiveCurrentMonth = () => {
+  const getMonthName = (month: number, year: number) => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${months[month - 1]} ${year}`;
+  };
+
+  const handleArchiveMonth = () => {
     if (!data) return;
 
     const goals = getGoals();
     const now = new Date();
-    const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    let targetYear = now.getFullYear();
+    let targetMonth = now.getMonth() + 1;
+
+    if (archiveMode === 'previous') {
+      targetMonth = now.getMonth(); // Previous month (0-indexed becomes previous)
+      if (targetMonth === 0) {
+        targetMonth = 12;
+        targetYear--;
+      }
+    }
+
+    const monthId = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+    const monthName = getMonthName(targetMonth, targetYear);
 
     const gmcGoalHit = data.dealership.gmcSold >= goals.gmcGoal;
     const buickGoalHit = data.dealership.buickSold >= goals.buickGoal;
@@ -45,10 +65,10 @@ export default function HistoryPage() {
 
     const archive: MonthlyArchive = {
       id: monthId,
-      monthName: data.monthName,
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-      archivedAt: now.toISOString(),
+      monthName: monthName,
+      year: targetYear,
+      month: targetMonth,
+      archivedAt: new Date().toISOString(),
       goals: {
         gmcGoal: goals.gmcGoal,
         buickGoal: goals.buickGoal,
@@ -93,6 +113,7 @@ export default function HistoryPage() {
     setArchives(getMonthlyArchives());
     setShowArchiveModal(false);
     setArchiveNotes('');
+    setArchiveMode('current');
   };
 
   const handleDeleteArchive = (id: string) => {
@@ -134,12 +155,20 @@ export default function HistoryPage() {
             <h1 className="text-3xl font-bold tracking-tight">Monthly History</h1>
             <p className="text-[#888] mt-1">Archive and view past month performance</p>
           </div>
-          <button
-            onClick={() => setShowArchiveModal(true)}
-            className="px-6 py-3 bg-[#c41230] text-white rounded-lg font-semibold hover:bg-[#9a0e26] transition-colors"
-          >
-            Archive Current Month
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setArchiveMode('previous'); setShowArchiveModal(true); }}
+              className="px-5 py-3 bg-[#2a2a2a] text-white rounded-lg font-semibold hover:bg-[#3a3a3a] transition-colors border border-[#444]"
+            >
+              Archive Previous Month
+            </button>
+            <button
+              onClick={() => { setArchiveMode('current'); setShowArchiveModal(true); }}
+              className="px-5 py-3 bg-[#c41230] text-white rounded-lg font-semibold hover:bg-[#9a0e26] transition-colors"
+            >
+              Archive Current Month
+            </button>
+          </div>
         </div>
 
         {/* Archive List */}
@@ -148,12 +177,20 @@ export default function HistoryPage() {
             <div className="text-6xl mb-4">📁</div>
             <h3 className="text-xl font-semibold mb-2">No Archives Yet</h3>
             <p className="text-[#888] mb-6">Archive your monthly data to track performance over time.</p>
-            <button
-              onClick={() => setShowArchiveModal(true)}
-              className="px-6 py-3 bg-[#c41230] text-white rounded-lg font-semibold hover:bg-[#9a0e26] transition-colors"
-            >
-              Archive Current Month
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => { setArchiveMode('previous'); setShowArchiveModal(true); }}
+                className="px-5 py-3 bg-[#2a2a2a] text-white rounded-lg font-semibold hover:bg-[#3a3a3a] transition-colors border border-[#444]"
+              >
+                Archive Previous Month
+              </button>
+              <button
+                onClick={() => { setArchiveMode('current'); setShowArchiveModal(true); }}
+                className="px-5 py-3 bg-[#c41230] text-white rounded-lg font-semibold hover:bg-[#9a0e26] transition-colors"
+              >
+                Archive Current Month
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -382,13 +419,25 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Archive Current Month Modal */}
+        {/* Archive Month Modal */}
         {showArchiveModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
             <div className="dashboard-card p-6 max-w-lg w-full mx-4">
-              <h2 className="text-xl font-semibold mb-4">Archive Current Month</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Archive {archiveMode === 'previous' ? 'Previous' : 'Current'} Month
+              </h2>
               <p className="text-[#888] mb-4">
-                This will save a snapshot of <span className="text-white font-semibold">{data?.monthName}</span> to your history.
+                This will save the current data as{' '}
+                <span className="text-white font-semibold">
+                  {archiveMode === 'previous'
+                    ? getMonthName(
+                        new Date().getMonth() === 0 ? 12 : new Date().getMonth(),
+                        new Date().getMonth() === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear()
+                      )
+                    : data?.monthName
+                  }
+                </span>{' '}
+                to your history.
               </p>
 
               {data && (
@@ -428,7 +477,7 @@ export default function HistoryPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={handleArchiveCurrentMonth}
+                  onClick={handleArchiveMonth}
                   className="flex-1 px-4 py-3 bg-[#22c55e] text-white rounded-lg font-semibold hover:bg-[#16a34a] transition-colors"
                 >
                   Save Archive
