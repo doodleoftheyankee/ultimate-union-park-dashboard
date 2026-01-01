@@ -124,21 +124,20 @@ function runArchive_(year, month) {
   ];
   archiveSheet.getRange(dataRow, 1, 1, newRowData.length).setValues([newRowData]);
 
-  // Write USED CARS data (columns L-R)
+  // Write USED CARS data (columns L-Q)
   var usedColStart = 12; // Column L
   var usedRowData = [
-    monthKey,                                    // L: Key (hidden)
-    monthName,                                   // M: Month
-    usedUnits,                                   // N: Units Sold
-    usedUnits >= USED_GOAL ? 'MET' : 'NOT MET', // O: Status
-    usedFront,                                   // P: Front End
-    usedBack,                                    // Q: Back End
-    usedTotal                                    // R: Total
+    monthName,                                   // L: Month
+    usedUnits,                                   // M: Units Sold
+    usedUnits >= USED_GOAL ? 'MET' : 'NOT MET', // N: Status
+    usedFront,                                   // O: Front End
+    usedBack,                                    // P: Back End
+    usedTotal                                    // Q: Total
   ];
   archiveSheet.getRange(dataRow, usedColStart, 1, usedRowData.length).setValues([usedRowData]);
 
-  // Write COMBINED data (columns T-X)
-  var combinedColStart = 20; // Column T
+  // Write COMBINED data (columns S-W)
+  var combinedColStart = 19; // Column S
   var combinedRowData = [
     monthName,                                   // T: Month
     combinedUnits,                               // U: Total Units
@@ -183,10 +182,10 @@ function setupThreeCharts_(sheet) {
     .setFontColor('#ffffff')
     .setFontWeight('bold');
 
-  // ===== USED CARS (Columns L-R) =====
+  // ===== USED CARS (Columns L-Q) =====
   var usedStart = 12;
 
-  sheet.getRange(1, usedStart, 1, 7).merge()
+  sheet.getRange(1, usedStart, 1, 6).merge()
     .setValue('🚙 USED CARS')
     .setBackground('#7c3aed')
     .setFontColor('#ffffff')
@@ -194,20 +193,20 @@ function setupThreeCharts_(sheet) {
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  sheet.getRange(2, usedStart, 1, 7).merge()
+  sheet.getRange(2, usedStart, 1, 6).merge()
     .setValue('Used Goal: ' + USED_GOAL)
     .setBackground('#ede9fe')
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  var usedHeaders = ['Key', 'Month', 'Units Sold', 'Status', 'Front End', 'Back End', 'Total'];
+  var usedHeaders = ['Month', 'Units Sold', 'Status', 'Front End', 'Back End', 'Total'];
   sheet.getRange(3, usedStart, 1, usedHeaders.length).setValues([usedHeaders])
     .setBackground('#4c1d95')
     .setFontColor('#ffffff')
     .setFontWeight('bold');
 
-  // ===== COMBINED TOTALS (Columns T-X) =====
-  var combStart = 20;
+  // ===== COMBINED TOTALS (Columns S-W) =====
+  var combStart = 19;
 
   sheet.getRange(1, combStart, 1, 5).merge()
     .setValue('📊 COMBINED TOTALS')
@@ -230,22 +229,21 @@ function setupThreeCharts_(sheet) {
     .setFontWeight('bold');
 
   // Gap columns
-  sheet.setColumnWidth(11, 20); // K
-  sheet.setColumnWidth(19, 20); // S
+  sheet.setColumnWidth(11, 20); // K (gap between NEW and USED)
+  sheet.setColumnWidth(18, 20); // R (gap between USED and COMBINED)
   sheet.getRange(1, 11, 3, 1).setBackground('#f3f4f6');
-  sheet.getRange(1, 19, 3, 1).setBackground('#f3f4f6');
+  sheet.getRange(1, 18, 3, 1).setBackground('#f3f4f6');
 
-  // Hide key columns
+  // Hide key column
   sheet.hideColumns(1);  // A
-  sheet.hideColumns(12); // L
 
   // Freeze header rows
   sheet.setFrozenRows(3);
 
   // Set column widths
   for (var c = 2; c <= 10; c++) sheet.setColumnWidth(c, 85);
-  for (var d = 13; d <= 18; d++) sheet.setColumnWidth(d, 85);
-  for (var e = 20; e <= 24; e++) sheet.setColumnWidth(e, 90);
+  for (var d = 12; d <= 17; d++) sheet.setColumnWidth(d, 85);
+  for (var e = 19; e <= 23; e++) sheet.setColumnWidth(e, 90);
 }
 
 function formatDataRow_(sheet, row) {
@@ -270,26 +268,26 @@ function formatDataRow_(sheet, row) {
     buickCell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
   }
 
-  // USED: Currency (P, Q, R = 16, 17, 18)
+  // USED: Currency (O, P, Q = 15, 16, 17)
+  sheet.getRange(row, 15).setNumberFormat('$#,##0');
   sheet.getRange(row, 16).setNumberFormat('$#,##0');
-  sheet.getRange(row, 17).setNumberFormat('$#,##0');
-  sheet.getRange(row, 18).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#ede9fe');
+  sheet.getRange(row, 17).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#ede9fe');
 
-  // USED: Status (O = 15)
-  var usedCell = sheet.getRange(row, 15);
+  // USED: Status (N = 14)
+  var usedCell = sheet.getRange(row, 14);
   if (usedCell.getValue() === 'MET') {
     usedCell.setBackground('#d4edda').setFontColor('#155724').setFontWeight('bold');
   } else {
     usedCell.setBackground('#f8d7da').setFontColor('#721c24').setFontWeight('bold');
   }
 
-  // COMBINED: Units (U = 21) highlighted
-  sheet.getRange(row, 21).setFontWeight('bold').setBackground('#fef3c7');
+  // COMBINED: Units (T = 20) highlighted
+  sheet.getRange(row, 20).setFontWeight('bold').setBackground('#fef3c7');
 
-  // COMBINED: Currency (V, W, X = 22, 23, 24)
+  // COMBINED: Currency (U, V, W = 21, 22, 23)
+  sheet.getRange(row, 21).setNumberFormat('$#,##0');
   sheet.getRange(row, 22).setNumberFormat('$#,##0');
-  sheet.getRange(row, 23).setNumberFormat('$#,##0');
-  sheet.getRange(row, 24).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#d1fae5');
+  sheet.getRange(row, 23).setNumberFormat('$#,##0').setFontWeight('bold').setBackground('#d1fae5');
 }
 
 function findLastDataRow_(sheet, col, startRow) {
