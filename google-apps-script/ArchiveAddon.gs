@@ -27,7 +27,10 @@ function addArchiveMenu_() {
     .addItem('Archive Current Month', 'archiveCurrentMonth_')
     .addItem('Archive Previous Month', 'archivePreviousMonth_')
     .addSeparator()
+    .addItem('🏁 End Month (Full Backup)', 'endMonthBackup_')
+    .addSeparator()
     .addItem('View Archives', 'viewArchives_')
+    .addItem('View Raw Backups', 'viewRawBackups_')
     .addToUi();
 }
 
@@ -48,8 +51,8 @@ function runArchive_(year, month) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var ui = SpreadsheetApp.getUi();
 
-  var newSheet = findSheet_(ss, ['New', 'NEW', 'New Cars']);
-  var usedSheet = findSheet_(ss, ['Used', 'USED', 'Used Cars']);
+  var newSheet = findSheet_(ss, ['New Car Tracker', 'New', 'NEW', 'New Cars']);
+  var usedSheet = findSheet_(ss, ['Used Car Tracker', 'Used', 'USED', 'Used Cars']);
 
   if (!newSheet || !usedSheet) {
     ui.alert('Cannot find New or Used sheet!');
@@ -343,4 +346,243 @@ function viewArchives_() {
 
 function getMonthName_(m) {
   return ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1];
+}
+
+// ============================================
+// END MONTH - Full Raw Data Backup
+// ============================================
+
+function endMonthBackup_() {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.alert(
+    '🏁 End Month Backup',
+    'This will create a raw data backup of the PREVIOUS month with all deal details.\n\n' +
+    'This includes deal numbers, customer names, and all data for callbacks.\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (result !== ui.Button.YES) return;
+
+  var now = new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth(); // Previous month (0-indexed = previous)
+  if (month === 0) { month = 12; year--; }
+
+  createRawBackup_(year, month);
+}
+
+function createRawBackup_(year, month) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  var newSheet = findSheet_(ss, ['New Car Tracker', 'New', 'NEW', 'New Cars']);
+  var usedSheet = findSheet_(ss, ['Used Car Tracker', 'Used', 'USED', 'Used Cars']);
+
+  if (!newSheet || !usedSheet) {
+    ui.alert('Cannot find New Car Tracker or Used Car Tracker sheet!');
+    return;
+  }
+
+  var monthName = getMonthName_(month);
+  var backupName = monthName + ' ' + year + ' - Raw Backup';
+
+  // Check if backup already exists
+  var existingBackup = ss.getSheetByName(backupName);
+  if (existingBackup) {
+    var overwrite = ui.alert(
+      'Backup Exists',
+      'A backup for ' + monthName + ' ' + year + ' already exists.\n\nOverwrite it?',
+      ui.ButtonSet.YES_NO
+    );
+    if (overwrite !== ui.Button.YES) return;
+    ss.deleteSheet(existingBackup);
+  }
+
+  // Create new backup sheet
+  var backupSheet = ss.insertSheet(backupName);
+
+  // Get NEW car data with headers
+  var newData = newSheet.getDataRange().getValues();
+  var newHeaders = newData[0]; // First row is headers
+  var newSales = filterByMonth_(newData, NEW_COLS.date, year, month);
+
+  // Get USED car data with headers
+  var usedData = usedSheet.getDataRange().getValues();
+  var usedHeaders = usedData[0];
+  var usedSales = filterByMonth_(usedData, USED_COLS.date, year, month);
+
+  if (newSales.length === 0 && usedSales.length === 0) {
+    ss.deleteSheet(backupSheet);
+    ui.alert('No sales found for ' + monthName + ' ' + year);
+    return;
+  }
+
+  var currentRow = 1;
+
+  // ===== NEW CARS SECTION =====
+  backupSheet.getRange(currentRow, 1, 1, newHeaders.length).merge()
+    .setValue('🚗 NEW CARS - ' + monthName + ' ' + year + ' (' + newSales.length + ' deals)')
+    .setBackground('#2563eb')
+    .setFontColor('#ffffff')
+    .setFontSize(14)
+    .setFontWeight('bold');
+  currentRow++;
+
+  // New car headers
+  backupSheet.getRange(currentRow, 1, 1, newHeaders.length).setValues([newHeaders])
+    .setBackground('#1e3a5f')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold');
+  currentRow++;
+
+  // New car data
+  if (newSales.length > 0) {
+    backupSheet.getRange(currentRow, 1, newSales.length, newSales[0].length).setValues(newSales);
+
+    // Alternate row colors for readability
+    for (var i = 0; i < newSales.length; i++) {
+      if (i % 2 === 1) {
+        backupSheet.getRange(currentRow + i, 1, 1, newSales[0].length).setBackground('#f0f9ff');
+      }
+    }
+    currentRow += newSales.length;
+  }
+
+  // Gap row
+  currentRow += 2;
+
+  // ===== USED CARS SECTION =====
+  backupSheet.getRange(currentRow, 1, 1, usedHeaders.length).merge()
+    .setValue('🚙 USED CARS - ' + monthName + ' ' + year + ' (' + usedSales.length + ' deals)')
+    .setBackground('#7c3aed')
+    .setFontColor('#ffffff')
+    .setFontSize(14)
+    .setFontWeight('bold');
+  currentRow++;
+
+  // Used car headers
+  backupSheet.getRange(currentRow, 1, 1, usedHeaders.length).setValues([usedHeaders])
+    .setBackground('#4c1d95')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold');
+  currentRow++;
+
+  // Used car data
+  if (usedSales.length > 0) {
+    backupSheet.getRange(currentRow, 1, usedSales.length, usedSales[0].length).setValues(usedSales);
+
+    // Alternate row colors for readability
+    for (var j = 0; j < usedSales.length; j++) {
+      if (j % 2 === 1) {
+        backupSheet.getRange(currentRow + j, 1, 1, usedSales[0].length).setBackground('#faf5ff');
+      }
+    }
+    currentRow += usedSales.length;
+  }
+
+  // Gap row
+  currentRow += 2;
+
+  // ===== SUMMARY SECTION =====
+  backupSheet.getRange(currentRow, 1, 1, 6).merge()
+    .setValue('📊 MONTH SUMMARY')
+    .setBackground('#059669')
+    .setFontColor('#ffffff')
+    .setFontSize(12)
+    .setFontWeight('bold');
+  currentRow++;
+
+  // Calculate totals
+  var gmcUnits = 0, buickUnits = 0, newFront = 0, newBack = 0;
+  for (var k = 0; k < newSales.length; k++) {
+    var make = String(newSales[k][NEW_COLS.make] || '').toUpperCase();
+    if (make.includes('GMC')) gmcUnits++;
+    if (make.includes('BUICK')) buickUnits++;
+    newFront += parseNum_(newSales[k][NEW_COLS.frontEnd]);
+    newBack += parseNum_(newSales[k][NEW_COLS.backEnd]);
+  }
+
+  var usedFront = 0, usedBack = 0;
+  for (var l = 0; l < usedSales.length; l++) {
+    usedFront += parseNum_(usedSales[l][USED_COLS.frontEnd]);
+    usedBack += parseNum_(usedSales[l][USED_COLS.backEnd]);
+  }
+
+  var summaryData = [
+    ['', 'Units', 'Goal', 'Status', 'Front End', 'Back End', 'Total'],
+    ['GMC', gmcUnits, GMC_GOAL, gmcUnits >= GMC_GOAL ? 'MET ✓' : 'NOT MET', '', '', ''],
+    ['Buick', buickUnits, BUICK_GOAL, buickUnits >= BUICK_GOAL ? 'MET ✓' : 'NOT MET', '', '', ''],
+    ['New Total', newSales.length, '', '', newFront, newBack, newFront + newBack],
+    ['Used Total', usedSales.length, USED_GOAL, usedSales.length >= USED_GOAL ? 'MET ✓' : 'NOT MET', usedFront, usedBack, usedFront + usedBack],
+    ['GRAND TOTAL', newSales.length + usedSales.length, '', '', newFront + usedFront, newBack + usedBack, newFront + newBack + usedFront + usedBack]
+  ];
+
+  backupSheet.getRange(currentRow, 1, summaryData.length, 7).setValues(summaryData);
+
+  // Format summary headers
+  backupSheet.getRange(currentRow, 1, 1, 7).setBackground('#065f46').setFontColor('#ffffff').setFontWeight('bold');
+
+  // Format Grand Total row
+  backupSheet.getRange(currentRow + 5, 1, 1, 7).setBackground('#d1fae5').setFontWeight('bold');
+
+  // Format currency columns
+  for (var m = currentRow + 1; m <= currentRow + 5; m++) {
+    backupSheet.getRange(m, 5).setNumberFormat('$#,##0');
+    backupSheet.getRange(m, 6).setNumberFormat('$#,##0');
+    backupSheet.getRange(m, 7).setNumberFormat('$#,##0');
+  }
+
+  // Auto-resize columns
+  for (var c = 1; c <= Math.max(newHeaders.length, usedHeaders.length); c++) {
+    backupSheet.autoResizeColumn(c);
+  }
+
+  // Freeze header row
+  backupSheet.setFrozenRows(0);
+
+  backupSheet.activate();
+
+  ui.alert('✅ Raw Backup Created!\n\n' +
+    'Sheet: "' + backupName + '"\n\n' +
+    'NEW CARS: ' + newSales.length + ' deals\n' +
+    '  - GMC: ' + gmcUnits + '\n' +
+    '  - Buick: ' + buickUnits + '\n\n' +
+    'USED CARS: ' + usedSales.length + ' deals\n\n' +
+    'All deal numbers and customer info preserved for callbacks!');
+}
+
+function viewRawBackups_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var backups = [];
+
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getName().includes('Raw Backup')) {
+      backups.push(sheets[i].getName());
+    }
+  }
+
+  if (backups.length === 0) {
+    SpreadsheetApp.getUi().alert('No raw backups found!\n\nUse "End Month (Full Backup)" to create one.');
+    return;
+  }
+
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.prompt(
+    'Raw Backups Available',
+    'Found ' + backups.length + ' backup(s):\n\n' + backups.join('\n') + '\n\nEnter the month name to view (e.g., "December 2024"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (result.getSelectedButton() !== ui.Button.OK) return;
+
+  var searchName = result.getResponseText().trim() + ' - Raw Backup';
+  var sheet = ss.getSheetByName(searchName);
+
+  if (sheet) {
+    sheet.activate();
+  } else {
+    ui.alert('Could not find: "' + searchName + '"');
+  }
 }
