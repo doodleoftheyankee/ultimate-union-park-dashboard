@@ -3,12 +3,19 @@
 // Then add: addArchiveMenu_(); to your onOpen()
 // ============================================
 
+// NEW sheet columns: Date | Deal # | Stock # | Make | Model | Year | Customer | Lead Type | Salesperson | Trade In | Trade Value | Sale Price | Front End Profit | Back End Profit | Total Profit | Financing | Warranty | D2E | Notes
 var NEW_COLS = {
-  date: 0, make: 4, frontEnd: 12, backEnd: 13
+  date: 0,       // Column A
+  make: 3,       // Column D - Make (GMC/Buick)
+  frontEnd: 12,  // Column M - Front End Profit
+  backEnd: 13    // Column N - Back End Profit
 };
 
+// USED sheet columns: Date | Deal # | Stock # | Year | Make | Model | Customer | Lead Type | Salesperson | Trade In | Trade Value | Sale Price | Front End Profit | Back End Profit | Total Profit | Financing | Warranty | Notes
 var USED_COLS = {
-  date: 0, frontEnd: 12, backEnd: 13
+  date: 0,       // Column A
+  frontEnd: 12,  // Column M - Front End Profit
+  backEnd: 13    // Column N - Back End Profit
 };
 
 var GMC_GOAL = 21;
