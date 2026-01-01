@@ -138,6 +138,34 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   return getMockDashboardData('Google Sheets not configured. Go to Settings to connect.');
 }
 
+// Fetch data for a specific month/year
+export async function fetchDashboardDataForMonth(year: number, month: number): Promise<DashboardData> {
+  const config = getSheetsConfig();
+
+  if (config.webAppUrl) {
+    try {
+      const response = await fetch(`${config.webAppUrl}?page=api&year=${year}&month=${month}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data as DashboardData;
+    } catch (error) {
+      console.error('Error fetching from web app:', error);
+      return getMockDashboardData('Connection error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  }
+
+  return getMockDashboardData('Google Sheets not configured. Go to Settings to connect.');
+}
+
 // Mock data for demonstration
 function getMockDashboardData(errorMessage?: string): DashboardData {
   const now = new Date();
