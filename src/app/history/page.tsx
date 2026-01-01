@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import DashboardWrapper from '@/components/DashboardWrapper';
-import { fetchDashboardData, DashboardData } from '@/lib/sheets';
+import { fetchDashboardData, fetchDashboardDataForMonth, DashboardData } from '@/lib/sheets';
 import { getGoals, getMonthlyArchives, addMonthlyArchive, deleteMonthlyArchive, updateArchiveNotes } from '@/lib/storage';
 import { MonthlyArchive } from '@/types';
 
@@ -39,8 +39,12 @@ export default function HistoryPage() {
     return `${months[month - 1]} ${year}`;
   };
 
-  const handleArchiveMonth = () => {
+  const [archiving, setArchiving] = useState(false);
+
+  const handleArchiveMonth = async () => {
     if (!data) return;
+
+    setArchiving(true);
 
     const goals = getGoals();
     const now = new Date();
@@ -56,12 +60,21 @@ export default function HistoryPage() {
       }
     }
 
+    // Fetch the correct month's data
+    let monthData: DashboardData;
+    if (archiveMode === 'previous') {
+      // Fetch previous month data from API
+      monthData = await fetchDashboardDataForMonth(targetYear, targetMonth);
+    } else {
+      monthData = data;
+    }
+
     const monthId = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
     const monthName = getMonthName(targetMonth, targetYear);
 
-    const gmcGoalHit = data.dealership.gmcSold >= goals.gmcGoal;
-    const buickGoalHit = data.dealership.buickSold >= goals.buickGoal;
-    const usedGoalHit = data.dealership.totalUsedUnits >= goals.usedGoal;
+    const gmcGoalHit = monthData.dealership.gmcSold >= goals.gmcGoal;
+    const buickGoalHit = monthData.dealership.buickSold >= goals.buickGoal;
+    const usedGoalHit = monthData.dealership.totalUsedUnits >= goals.usedGoal;
 
     const archive: MonthlyArchive = {
       id: monthId,
@@ -78,21 +91,21 @@ export default function HistoryPage() {
         minVehiclesForBonus: goals.minVehiclesForBonus,
       },
       results: {
-        gmcSold: data.dealership.gmcSold,
-        buickSold: data.dealership.buickSold,
-        usedSold: data.dealership.totalUsedUnits,
-        totalNewUnits: data.dealership.totalNewUnits,
-        totalUnits: data.dealership.totalUnits,
-        totalProfit: data.dealership.totalProfit,
-        totalFrontEnd: data.dealership.totalFrontEnd,
-        totalBackEnd: data.dealership.totalBackEnd,
-        avgProfit: data.dealership.avgProfit,
+        gmcSold: monthData.dealership.gmcSold,
+        buickSold: monthData.dealership.buickSold,
+        usedSold: monthData.dealership.totalUsedUnits,
+        totalNewUnits: monthData.dealership.totalNewUnits,
+        totalUnits: monthData.dealership.totalUnits,
+        totalProfit: monthData.dealership.totalProfit,
+        totalFrontEnd: monthData.dealership.totalFrontEnd,
+        totalBackEnd: monthData.dealership.totalBackEnd,
+        avgProfit: monthData.dealership.avgProfit,
         gmcGoalHit,
         buickGoalHit,
         usedGoalHit,
         d2eBonusUnlocked: gmcGoalHit && buickGoalHit,
       },
-      salespeople: data.salespeople.map(sp => ({
+      salespeople: monthData.salespeople.map(sp => ({
         name: sp.name,
         nickname: sp.nickname,
         newUnits: sp.newUnits,
@@ -114,6 +127,7 @@ export default function HistoryPage() {
     setShowArchiveModal(false);
     setArchiveNotes('');
     setArchiveMode('current');
+    setArchiving(false);
   };
 
   const handleDeleteArchive = (id: string) => {
@@ -472,15 +486,17 @@ export default function HistoryPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowArchiveModal(false)}
-                  className="flex-1 px-4 py-3 bg-[#2a2a2a] text-white rounded-lg font-semibold hover:bg-[#3a3a3a] transition-colors"
+                  disabled={archiving}
+                  className="flex-1 px-4 py-3 bg-[#2a2a2a] text-white rounded-lg font-semibold hover:bg-[#3a3a3a] transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleArchiveMonth}
-                  className="flex-1 px-4 py-3 bg-[#22c55e] text-white rounded-lg font-semibold hover:bg-[#16a34a] transition-colors"
+                  disabled={archiving}
+                  className="flex-1 px-4 py-3 bg-[#22c55e] text-white rounded-lg font-semibold hover:bg-[#16a34a] transition-colors disabled:opacity-50"
                 >
-                  Save Archive
+                  {archiving ? 'Fetching Data...' : 'Save Archive'}
                 </button>
               </div>
             </div>

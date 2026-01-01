@@ -498,13 +498,229 @@ const MetricsEngine = {
 
 function doGet(e) {
   try {
-    const metrics = MetricsEngine.getDashboardMetrics();
+    // Check if specific month/year requested
+    var params = e ? e.parameter : {};
+    var requestedMonth = params.month ? parseInt(params.month) : null;
+    var requestedYear = params.year ? parseInt(params.year) : null;
+
+    var metrics;
+    if (requestedMonth && requestedYear) {
+      metrics = getMetricsForMonth(requestedYear, requestedMonth);
+    } else {
+      metrics = MetricsEngine.getDashboardMetrics();
+    }
+
     return ContentService.createTextOutput(JSON.stringify(metrics))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ error: error.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Get metrics for a specific month/year
+function getMetricsForMonth(year, month) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var newSheet = ss.getSheetByName(CONFIG.SHEETS.NEW_CAR_TRACKER);
+  var usedSheet = ss.getSheetByName(CONFIG.SHEETS.USED_CAR_TRACKER);
+
+  if (!newSheet || !usedSheet) {
+    return { error: 'Sheets not found' };
+  }
+
+  var goals = DataAccess.getMonthlyGoals();
+  var d2eGoals = DataAccess.getD2EGoals();
+
+  // Get sales data for specific month
+  var newData = newSheet.getDataRange().getValues();
+  var usedData = usedSheet.getDataRange().getValues();
+
+  var newCarSales = [];
+  var usedCarSales = [];
+
+  // Parse new car sales for requested month
+  for (var i = CONFIG.DATA.TRACKER.DATA_START_ROW - 1; i < newData.length; i++) {
+    var row = newData[i];
+    if (!row[0]) continue;
+
+    var saleDate = row[0] instanceof Date ? row[0] : new Date(row[0]);
+    if (isNaN(saleDate.getTime())) continue;
+
+    if (saleDate.getMonth() + 1 === month && saleDate.getFullYear() === year) {
+      newCarSales.push({
+        date: saleDate,
+        dealNumber: String(row[1]),
+        stockNumber: String(row[2]),
+        make: String(row[3]),
+        model: String(row[4]),
+        year: Utils.toInt(row[5]),
+        customerName: String(row[6]),
+        leadType: String(row[7]),
+        salesPerson: String(row[8]),
+        frontEndProfit: Utils.toNumber(row[12]),
+        backEndProfit: Utils.toNumber(row[13]),
+        totalProfit: Utils.toNumber(row[14])
+      });
+    }
+  }
+
+  // Parse used car sales for requested month
+  for (var j = CONFIG.DATA.TRACKER.DATA_START_ROW - 1; j < usedData.length; j++) {
+    var urow = usedData[j];
+    if (!urow[0]) continue;
+
+    var uSaleDate = urow[0] instanceof Date ? urow[0] : new Date(urow[0]);
+    if (isNaN(uSaleDate.getTime())) continue;
+
+    if (uSaleDate.getMonth() + 1 === month && uSaleDate.getFullYear() === year) {
+      usedCarSales.push({
+        date: uSaleDate,
+        dealNumber: String(urow[1]),
+        stockNumber: String(urow[2]),
+        year: Utils.toInt(urow[3]),
+        make: String(urow[4]),
+        model: String(urow[5]),
+        customerName: String(urow[6]),
+        leadType: String(urow[7]),
+        salesPerson: String(urow[8]),
+        frontEndProfit: Utils.toNumber(urow[12]),
+        backEndProfit: Utils.toNumber(urow[13]),
+        totalProfit: Utils.toNumber(urow[14])
+      });
+    }
+  }
+
+  // Calculate metrics
+  var gmcNewSales = newCarSales.filter(function(s) { return Utils.sanitize(s.make) === "GMC"; });
+  var buickNewSales = newCarSales.filter(function(s) { return Utils.sanitize(s.make) === "BUICK"; });
+
+  var totalNewUnits = newCarSales.length;
+  var totalUsedUnits = usedCarSales.length;
+  var totalUnits = totalNewUnits + totalUsedUnits;
+
+  var newProfit = newCarSales.reduce(function(sum, s) { return sum + s.totalProfit; }, 0);
+  var usedProfit = usedCarSales.reduce(function(sum, s) { return sum + s.totalProfit; }, 0);
+  var totalProfit = newProfit + usedProfit;
+
+  var totalFrontEnd = newCarSales.reduce(function(sum, s) { return sum + s.frontEndProfit; }, 0) +
+                      usedCarSales.reduce(function(sum, s) { return sum + s.frontEndProfit; }, 0);
+  var totalBackEnd = newCarSales.reduce(function(sum, s) { return sum + s.backEndProfit; }, 0) +
+                     usedCarSales.reduce(function(sum, s) { return sum + s.backEndProfit; }, 0);
+
+  // Salesperson metrics
+  var salespersonMetrics = CONFIG.TEAM.getActiveNames().map(function(name) {
+    var normalizedName = Utils.sanitize(name);
+    var firstName = normalizedName.split(' ')[0];
+
+    var personNewSales = newCarSales.filter(function(s) {
+      var spName = Utils.sanitize(s.salesPerson);
+      return spName === normalizedName || spName === firstName || spName.indexOf(firstName) === 0;
+    });
+    var personUsedSales = usedCarSales.filter(function(s) {
+      var spName = Utils.sanitize(s.salesPerson);
+      return spName === normalizedName || spName === firstName || spName.indexOf(firstName) === 0;
+    });
+
+    var d2e = d2eGoals[normalizedName] || { goal: 4 };
+    var newUnits = personNewSales.length;
+    var usedUnits = personUsedSales.length;
+
+    var gmcUnits = personNewSales.filter(function(s) { return Utils.sanitize(s.make) === "GMC"; }).length;
+    var buickUnits = personNewSales.filter(function(s) { return Utils.sanitize(s.make) === "BUICK"; }).length;
+
+    var personNewProfit = personNewSales.reduce(function(sum, s) { return sum + s.totalProfit; }, 0);
+    var personUsedProfit = personUsedSales.reduce(function(sum, s) { return sum + s.totalProfit; }, 0);
+
+    var personFrontEnd = personNewSales.reduce(function(sum, s) { return sum + s.frontEndProfit; }, 0) +
+                         personUsedSales.reduce(function(sum, s) { return sum + s.frontEndProfit; }, 0);
+    var personBackEnd = personNewSales.reduce(function(sum, s) { return sum + s.backEndProfit; }, 0) +
+                        personUsedSales.reduce(function(sum, s) { return sum + s.backEndProfit; }, 0);
+
+    var meetsMinUnits = newUnits >= CONFIG.COMPENSATION.D2E.MIN_UNITS_REQUIRED;
+    var meetsD2EGoal = newUnits >= d2e.goal;
+    var bonusEligible = meetsMinUnits && meetsD2EGoal;
+
+    var person = CONFIG.TEAM.getByName(name);
+
+    return {
+      name: name,
+      nickname: person ? person.nickname : name.split(" ")[0],
+      newUnits: newUnits,
+      usedUnits: usedUnits,
+      totalUnits: newUnits + usedUnits,
+      gmcUnits: gmcUnits,
+      buickUnits: buickUnits,
+      frontEndProfit: personFrontEnd,
+      backEndProfit: personBackEnd,
+      newProfit: personNewProfit,
+      usedProfit: personUsedProfit,
+      totalProfit: personNewProfit + personUsedProfit,
+      avgNewProfit: newUnits > 0 ? personNewProfit / newUnits : 0,
+      avgUsedProfit: usedUnits > 0 ? personUsedProfit / usedUnits : 0,
+      avgFrontEnd: (newUnits + usedUnits) > 0 ? personFrontEnd / (newUnits + usedUnits) : 0,
+      avgBackEnd: (newUnits + usedUnits) > 0 ? personBackEnd / (newUnits + usedUnits) : 0,
+      d2eGoal: d2e.goal,
+      meetsMinUnits: meetsMinUnits,
+      meetsD2EGoal: meetsD2EGoal,
+      bonusEligible: bonusEligible,
+      bonusAmount: bonusEligible ? CONFIG.COMPENSATION.D2E.BONUS_AMOUNT : 0
+    };
+  });
+
+  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var daysInMonth = new Date(year, month, 0).getDate();
+
+  return {
+    timestamp: new Date().toISOString(),
+    monthName: monthNames[month - 1] + ' ' + year,
+    requestedMonth: month,
+    requestedYear: year,
+    daysElapsed: daysInMonth,
+    daysRemaining: 0,
+    daysInMonth: daysInMonth,
+    percentComplete: 1,
+
+    goals: goals,
+
+    dealership: {
+      totalNewUnits: totalNewUnits,
+      gmcSold: gmcNewSales.length,
+      gmcGoal: goals.gmcNewGoal,
+      gmcProgress: goals.gmcNewGoal > 0 ? gmcNewSales.length / goals.gmcNewGoal : 0,
+      gmcRemaining: Math.max(0, goals.gmcNewGoal - gmcNewSales.length),
+      buickSold: buickNewSales.length,
+      buickGoal: goals.buickNewGoal,
+      buickProgress: goals.buickNewGoal > 0 ? buickNewSales.length / goals.buickNewGoal : 0,
+      buickRemaining: Math.max(0, goals.buickNewGoal - buickNewSales.length),
+      newProfit: newProfit,
+      avgNewProfit: totalNewUnits > 0 ? newProfit / totalNewUnits : 0,
+      totalUsedUnits: totalUsedUnits,
+      usedGoal: goals.usedGoal,
+      usedProgress: goals.usedGoal > 0 ? totalUsedUnits / goals.usedGoal : 0,
+      usedRemaining: Math.max(0, goals.usedGoal - totalUsedUnits),
+      usedProfit: usedProfit,
+      avgUsedProfit: totalUsedUnits > 0 ? usedProfit / totalUsedUnits : 0,
+      totalUnits: totalUnits,
+      totalFrontEnd: totalFrontEnd,
+      totalBackEnd: totalBackEnd,
+      totalProfit: totalProfit,
+      avgProfit: totalUnits > 0 ? totalProfit / totalUnits : 0,
+      avgFrontEnd: totalUnits > 0 ? totalFrontEnd / totalUnits : 0,
+      avgBackEnd: totalUnits > 0 ? totalBackEnd / totalUnits : 0,
+      totalGrossGoal: goals.totalGrossGoal,
+      bonusEligibleCount: salespersonMetrics.filter(function(p) { return p.bonusEligible; }).length,
+      teamSize: CONFIG.TEAM.count()
+    },
+
+    salespeople: salespersonMetrics,
+    recentSales: newCarSales.concat(usedCarSales).slice(0, 20),
+
+    pace: {
+      gmc: { sold: gmcNewSales.length, goal: goals.gmcNewGoal, needed: 0, pacePerDay: 0, onTrack: gmcNewSales.length >= goals.gmcNewGoal },
+      buick: { sold: buickNewSales.length, goal: goals.buickNewGoal, needed: 0, pacePerDay: 0, onTrack: buickNewSales.length >= goals.buickNewGoal },
+      used: { sold: totalUsedUnits, goal: goals.usedGoal, needed: 0, pacePerDay: 0, onTrack: totalUsedUnits >= goals.usedGoal }
+    }
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
