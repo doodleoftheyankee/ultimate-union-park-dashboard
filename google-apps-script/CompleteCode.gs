@@ -525,7 +525,7 @@ function getMetricsForMonth(year, month) {
   var usedSheet = ss.getSheetByName(CONFIG.SHEETS.USED_CAR_TRACKER);
 
   if (!newSheet || !usedSheet) {
-    return { error: 'Sheets not found' };
+    return { error: 'Sheets not found', newSheetExists: !!newSheet, usedSheetExists: !!usedSheet };
   }
 
   var goals = DataAccess.getMonthlyGoals();
@@ -534,6 +534,10 @@ function getMetricsForMonth(year, month) {
   // Get sales data for specific month
   var newData = newSheet.getDataRange().getValues();
   var usedData = usedSheet.getDataRange().getValues();
+
+  // Debug: check what months exist in the data
+  var monthsInNewData = {};
+  var monthsInUsedData = {};
 
   var newCarSales = [];
   var usedCarSales = [];
@@ -545,6 +549,10 @@ function getMetricsForMonth(year, month) {
 
     var saleDate = row[0] instanceof Date ? row[0] : new Date(row[0]);
     if (isNaN(saleDate.getTime())) continue;
+
+    // Track what months we find
+    var monthKey = saleDate.getFullYear() + '-' + (saleDate.getMonth() + 1);
+    monthsInNewData[monthKey] = (monthsInNewData[monthKey] || 0) + 1;
 
     if (saleDate.getMonth() + 1 === month && saleDate.getFullYear() === year) {
       newCarSales.push({
@@ -571,6 +579,10 @@ function getMetricsForMonth(year, month) {
 
     var uSaleDate = urow[0] instanceof Date ? urow[0] : new Date(urow[0]);
     if (isNaN(uSaleDate.getTime())) continue;
+
+    // Track what months we find
+    var uMonthKey = uSaleDate.getFullYear() + '-' + (uSaleDate.getMonth() + 1);
+    monthsInUsedData[uMonthKey] = (monthsInUsedData[uMonthKey] || 0) + 1;
 
     if (uSaleDate.getMonth() + 1 === month && uSaleDate.getFullYear() === year) {
       usedCarSales.push({
@@ -719,6 +731,18 @@ function getMetricsForMonth(year, month) {
       gmc: { sold: gmcNewSales.length, goal: goals.gmcNewGoal, needed: 0, pacePerDay: 0, onTrack: gmcNewSales.length >= goals.gmcNewGoal },
       buick: { sold: buickNewSales.length, goal: goals.buickNewGoal, needed: 0, pacePerDay: 0, onTrack: buickNewSales.length >= goals.buickNewGoal },
       used: { sold: totalUsedUnits, goal: goals.usedGoal, needed: 0, pacePerDay: 0, onTrack: totalUsedUnits >= goals.usedGoal }
+    },
+
+    // Debug info - shows what months of data exist in sheets
+    debug: {
+      requestedMonth: month,
+      requestedYear: year,
+      newDataRows: newData.length,
+      usedDataRows: usedData.length,
+      monthsFoundInNewData: monthsInNewData,
+      monthsFoundInUsedData: monthsInUsedData,
+      matchedNewSales: newCarSales.length,
+      matchedUsedSales: usedCarSales.length
     }
   };
 }
