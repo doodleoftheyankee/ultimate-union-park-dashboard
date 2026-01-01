@@ -8,7 +8,7 @@ import Celebration, { useGoalCelebration } from './Celebration';
 import { fetchDashboardData, RecentSale } from '@/lib/sheets';
 import { getGoals, getSheetsConfig } from '@/lib/storage';
 
-const PAGES = ['/', '/goals', '/spiffs', '/manager'];
+const PAGES = ['/', '/goals', '/spiffs', '/manager', '/history'];
 const ROTATE_INTERVAL = 15000; // 15 seconds per page
 
 interface DashboardWrapperProps {
