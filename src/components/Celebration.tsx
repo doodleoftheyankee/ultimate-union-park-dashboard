@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { getCelebratedGoals, markGoalCelebrated } from '@/lib/storage';
 
 interface CelebrationProps {
   trigger: boolean;
@@ -136,30 +137,50 @@ export default function Celebration({ trigger, message = "GOAL HIT!", onComplete
   );
 }
 
-// Hook to track goal achievements
+// Hook to track goal achievements - persists to localStorage to prevent repeated celebrations
 export function useGoalCelebration(goals: { gmcHit: boolean; buickHit: boolean; usedHit: boolean }) {
-  const [previousGoals, setPreviousGoals] = useState({ gmcHit: false, buickHit: false, usedHit: false });
   const [celebration, setCelebration] = useState<{ active: boolean; message: string }>({ active: false, message: '' });
+  const hasInitialized = useRef(false);
+  const previousGoals = useRef<{ gmcHit: boolean; buickHit: boolean; usedHit: boolean } | null>(null);
 
   useEffect(() => {
-    // Check if any goal was just hit
-    if (goals.gmcHit && !previousGoals.gmcHit) {
+    // Skip the very first render to allow data to load
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      previousGoals.current = goals;
+      return;
+    }
+
+    // Get the persisted celebration state for this month
+    const celebrated = getCelebratedGoals();
+    const prev = previousGoals.current || { gmcHit: false, buickHit: false, usedHit: false };
+
+    // Check if GMC goal was just hit (transition from false to true) and not already celebrated
+    if (goals.gmcHit && !prev.gmcHit && !celebrated.gmcCelebrated) {
       setCelebration({ active: true, message: 'GMC GOAL HIT!' });
-    } else if (goals.buickHit && !previousGoals.buickHit) {
+      markGoalCelebrated('gmc');
+    }
+    // Check if Buick goal was just hit and not already celebrated
+    else if (goals.buickHit && !prev.buickHit && !celebrated.buickCelebrated) {
       setCelebration({ active: true, message: 'BUICK GOAL HIT!' });
-    } else if (goals.usedHit && !previousGoals.usedHit) {
+      markGoalCelebrated('buick');
+    }
+    // Check if Used goal was just hit and not already celebrated
+    else if (goals.usedHit && !prev.usedHit && !celebrated.usedCelebrated) {
       setCelebration({ active: true, message: 'USED GOAL HIT!' });
+      markGoalCelebrated('used');
     }
 
-    // Check if both D2E goals hit
-    if (goals.gmcHit && goals.buickHit && (!previousGoals.gmcHit || !previousGoals.buickHit)) {
-      if (previousGoals.gmcHit || previousGoals.buickHit) {
-        setCelebration({ active: true, message: 'D2E BONUS UNLOCKED!' });
-      }
+    // Check if D2E bonus was just unlocked (both GMC and Buick hit) and not already celebrated
+    const d2eNowUnlocked = goals.gmcHit && goals.buickHit;
+    const d2eWasUnlocked = prev.gmcHit && prev.buickHit;
+    if (d2eNowUnlocked && !d2eWasUnlocked && !celebrated.d2eCelebrated) {
+      setCelebration({ active: true, message: 'D2E BONUS UNLOCKED!' });
+      markGoalCelebrated('d2e');
     }
 
-    setPreviousGoals(goals);
-  }, [goals, previousGoals]);
+    previousGoals.current = goals;
+  }, [goals]);
 
   const clearCelebration = useCallback(() => {
     setCelebration({ active: false, message: '' });
