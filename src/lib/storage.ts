@@ -1,4 +1,4 @@
-import { MonthlyGoals, SpiffCar, WeeklyContestConfig } from '@/types';
+import { MonthlyGoals, SpiffCar, WeeklyContestConfig, MonthlyArchive } from '@/types';
 
 const GOALS_KEY = 'union-park-goals';
 const SPIFFS_KEY = 'union-park-spiffs';
@@ -6,6 +6,7 @@ const SHEETS_CONFIG_KEY = 'union-park-sheets-config';
 const INDIVIDUAL_GOALS_KEY = 'union-park-individual-goals';
 const CONTESTS_KEY = 'union-park-contests';
 const CELEBRATED_GOALS_KEY = 'union-park-celebrated-goals';
+const ARCHIVE_KEY = 'union-park-monthly-archive';
 
 // Default goals data
 const defaultGoals: MonthlyGoals = {
@@ -316,4 +317,58 @@ export function markGoalCelebrated(goal: 'gmc' | 'buick' | 'used' | 'd2e'): void
       break;
   }
   saveCelebratedGoals(celebrated);
+}
+
+// Monthly Archive storage functions
+export function getMonthlyArchives(): MonthlyArchive[] {
+  if (typeof window === 'undefined') return [];
+
+  const stored = localStorage.getItem(ARCHIVE_KEY);
+  if (!stored) return [];
+
+  try {
+    const archives = JSON.parse(stored) as MonthlyArchive[];
+    // Sort by date descending (most recent first)
+    return archives.sort((a, b) => b.id.localeCompare(a.id));
+  } catch {
+    return [];
+  }
+}
+
+export function saveMonthlyArchives(archives: MonthlyArchive[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archives));
+}
+
+export function addMonthlyArchive(archive: MonthlyArchive): void {
+  const archives = getMonthlyArchives();
+  // Check if this month already exists
+  const existingIndex = archives.findIndex(a => a.id === archive.id);
+  if (existingIndex >= 0) {
+    // Update existing archive
+    archives[existingIndex] = archive;
+  } else {
+    // Add new archive
+    archives.push(archive);
+  }
+  saveMonthlyArchives(archives);
+}
+
+export function getMonthlyArchive(id: string): MonthlyArchive | null {
+  const archives = getMonthlyArchives();
+  return archives.find(a => a.id === id) || null;
+}
+
+export function deleteMonthlyArchive(id: string): void {
+  const archives = getMonthlyArchives().filter(a => a.id !== id);
+  saveMonthlyArchives(archives);
+}
+
+export function updateArchiveNotes(id: string, notes: string): void {
+  const archives = getMonthlyArchives();
+  const archive = archives.find(a => a.id === id);
+  if (archive) {
+    archive.notes = notes;
+    saveMonthlyArchives(archives);
+  }
 }

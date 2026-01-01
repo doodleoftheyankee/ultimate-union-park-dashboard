@@ -76,3 +76,58 @@ export interface WeeklyContestConfig {
   winner?: string;
   createdAt: string;
 }
+
+// Monthly Archive - stores historical month data
+export interface MonthlyArchive {
+  id: string; // Format: "YYYY-MM"
+  monthName: string; // "December 2024"
+  year: number;
+  month: number; // 1-12
+  archivedAt: string; // ISO date string
+
+  // Goals for the month
+  goals: {
+    gmcGoal: number;
+    buickGoal: number;
+    usedGoal: number;
+    totalGrossGoal: number;
+    bonusPerPerson: number;
+    minVehiclesForBonus: number;
+  };
+
+  // Final results
+  results: {
+    gmcSold: number;
+    buickSold: number;
+    usedSold: number;
+    totalNewUnits: number;
+    totalUnits: number;
+    totalProfit: number;
+    totalFrontEnd: number;
+    totalBackEnd: number;
+    avgProfit: number;
+    gmcGoalHit: boolean;
+    buickGoalHit: boolean;
+    usedGoalHit: boolean;
+    d2eBonusUnlocked: boolean;
+  };
+
+  // Salesperson performance for the month
+  salespeople: {
+    name: string;
+    nickname: string;
+    newUnits: number;
+    usedUnits: number;
+    totalUnits: number;
+    gmcUnits: number;
+    buickUnits: number;
+    totalProfit: number;
+    frontEndProfit: number;
+    backEndProfit: number;
+    bonusEligible: boolean;
+    bonusAmount: number;
+  }[];
+
+  // Optional notes
+  notes?: string;
+}
