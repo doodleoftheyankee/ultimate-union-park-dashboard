@@ -538,6 +538,7 @@ function getMetricsForMonth(year, month) {
   // Debug: check what months exist in the data
   var monthsInNewData = {};
   var monthsInUsedData = {};
+  var sampleDates = []; // Store first 5 raw date values for debugging
 
   var newCarSales = [];
   var usedCarSales = [];
@@ -546,6 +547,15 @@ function getMetricsForMonth(year, month) {
   for (var i = CONFIG.DATA.TRACKER.DATA_START_ROW - 1; i < newData.length; i++) {
     var row = newData[i];
     if (!row[0]) continue;
+
+    // Capture first 5 raw dates for debugging
+    if (sampleDates.length < 5) {
+      sampleDates.push({
+        raw: String(row[0]),
+        isDate: row[0] instanceof Date,
+        parsed: row[0] instanceof Date ? row[0].toISOString() : new Date(row[0]).toISOString()
+      });
+    }
 
     var saleDate = row[0] instanceof Date ? row[0] : new Date(row[0]);
     if (isNaN(saleDate.getTime())) continue;
@@ -742,7 +752,8 @@ function getMetricsForMonth(year, month) {
       monthsFoundInNewData: monthsInNewData,
       monthsFoundInUsedData: monthsInUsedData,
       matchedNewSales: newCarSales.length,
-      matchedUsedSales: usedCarSales.length
+      matchedUsedSales: usedCarSales.length,
+      sampleDates: sampleDates
     }
   };
 }
