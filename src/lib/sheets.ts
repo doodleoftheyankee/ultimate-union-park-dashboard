@@ -226,7 +226,10 @@ function getMockDashboardData(errorMessage?: string): DashboardData {
       { name: 'CHRIS MEEKS', nickname: 'Chris', newUnits: 2, usedUnits: 2, totalUnits: 4, gmcUnits: 2, buickUnits: 0, frontEndProfit: 4100, backEndProfit: 5000, newProfit: 5100, usedProfit: 4000, totalProfit: 9100, avgNewProfit: 2550, avgUsedProfit: 2000, avgFrontEnd: 1025, avgBackEnd: 1250, d2eGoal: 4, meetsMinUnits: false, meetsD2EGoal: false, bonusEligible: false, bonusAmount: 0 },
       { name: 'JAVIER AVILES', nickname: 'Javier', newUnits: 0, usedUnits: 1, totalUnits: 1, gmcUnits: 0, buickUnits: 0, frontEndProfit: 800, backEndProfit: 1200, newProfit: 0, usedProfit: 2000, totalProfit: 2000, avgNewProfit: 0, avgUsedProfit: 2000, avgFrontEnd: 800, avgBackEnd: 1200, d2eGoal: 4, meetsMinUnits: false, meetsD2EGoal: false, bonusEligible: false, bonusAmount: 0 },
       { name: 'ALFONSO COLON', nickname: 'Alfonso', newUnits: 0, usedUnits: 1, totalUnits: 1, gmcUnits: 0, buickUnits: 0, frontEndProfit: 900, backEndProfit: 1100, newProfit: 0, usedProfit: 2000, totalProfit: 2000, avgNewProfit: 0, avgUsedProfit: 2000, avgFrontEnd: 900, avgBackEnd: 1100, d2eGoal: 4, meetsMinUnits: false, meetsD2EGoal: false, bonusEligible: false, bonusAmount: 0 },
-    ],
+      { name: 'ARMANDO CHARRIEZ', nickname: 'Armando', newUnits: 0, usedUnits: 0, totalUnits: 0, gmcUnits: 0, buickUnits: 0, frontEndProfit: 0, backEndProfit: 0, newProfit: 0, usedProfit: 0, totalProfit: 0, avgNewProfit: 0, avgUsedProfit: 0, avgFrontEnd: 0, avgBackEnd: 0, d2eGoal: 4, meetsMinUnits: false, meetsD2EGoal: false, bonusEligible: false, bonusAmount: 0 },
+      { name: 'EDDIE PEREZ', nickname: 'Eddie', newUnits: 0, usedUnits: 0, totalUnits: 0, gmcUnits: 0, buickUnits: 0, frontEndProfit: 0, backEndProfit: 0, newProfit: 0, usedProfit: 0, totalProfit: 0, avgNewProfit: 0, avgUsedProfit: 0, avgFrontEnd: 0, avgBackEnd: 0, d2eGoal: 4, meetsMinUnits: false, meetsD2EGoal: false, bonusEligible: false, bonusAmount: 0 },
+
+     ],
 
     recentSales: [
       { date: '2024-12-16', dealNumber: '157021', stockNumber: 'G25042', make: 'GMC', model: 'SIERRA 1500 DENALI', year: 2025, customerName: 'JOHNSON, MICHAEL', salesPerson: 'ANDREA GUIDO', frontEndProfit: 1800, backEndProfit: 1400, totalProfit: 3200 },
