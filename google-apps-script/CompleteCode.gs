@@ -27,7 +27,9 @@ const CONFIG = {
       { id: "SW", name: "SAM WILLIAMS", active: true, nickname: "Sam" },
       { id: "CM", name: "CHRIS MEEKS", active: true, nickname: "Chris" },
       { id: "JA", name: "JAVIER AVILES", active: true, nickname: "Javier" },
-      { id: "AC", name: "ALFONSO COLON", active: true, nickname: "Alfonso" }
+      { id: "AC", name: "ALFONSO COLON", active: true, nickname: "Alfonso" },
+      { id: "ACH", name: "ARMANDO CHARRIEZ", active: true, nickname: "Armando" },
+      { id: "EP", name: "EDDIE PEREZ", active: true, nickname: "Eddie" }
     ],
     getActiveNames: function() { return this.SALESPEOPLE.filter(function(p) { return p.active; }).map(function(p) { return p.name; }); },
     getActivePeople: function() { return this.SALESPEOPLE.filter(function(p) { return p.active; }); },
@@ -876,6 +878,8 @@ function showD2EGoalManager() {
       <tr><td>Chris Meeks</td><td><input type="number" id="chris" value="4"></td></tr>
       <tr><td>Javier Aviles</td><td><input type="number" id="javier" value="4"></td></tr>
       <tr><td>Alfonso Colon</td><td><input type="number" id="alfonso" value="4"></td></tr>
+      <tr><td>Armando Charriez</td><td><input type="number" id="armando" value="4"></td></tr>
+      <tr><td>Eddie Perez</td><td><input type="number" id="eddie" value="4"></td></tr>
     </table>
     <button onclick="saveD2E()">SAVE D2E GOALS</button>
     <div id="success" class="success">✓ D2E Goals Saved!</div>
@@ -893,7 +897,9 @@ function showD2EGoalManager() {
             sam: parseInt(document.getElementById("sam").value) || 4,
             chris: parseInt(document.getElementById("chris").value) || 4,
             javier: parseInt(document.getElementById("javier").value) || 4,
-            alfonso: parseInt(document.getElementById("alfonso").value) || 4
+            alfonso: parseInt(document.getElementById("alfonso").value) || 4,
+            armando: parseInt(document.getElementById("armando").value) || 4,
+            eddie: parseInt(document.getElementById("eddie").value) || 4
           }
         };
         google.script.run.withSuccessHandler(function() {
@@ -924,7 +930,9 @@ function saveMonthlyGoalsFromManager(goals) {
       'sam': 'SAM WILLIAMS',
       'chris': 'CHRIS MEEKS',
       'javier': 'JAVIER AVILES',
-      'alfonso': 'ALFONSO COLON'
+      'alfonso': 'ALFONSO COLON',
+      'armando': 'ARMANDO CHARRIEZ',
+      'eddie': 'EDDIE PEREZ'
     };
 
     for (var key in goals.individual) {
@@ -1052,6 +1060,8 @@ function getAddDealFormHtml() {
             <option value="CHRIS MEEKS">Chris Meeks</option>
             <option value="JAVIER AVILES">Javier Aviles</option>
             <option value="ALFONSO COLON">Alfonso Colon</option>
+            <option value="ARMANDO CHARRIEZ">Armando Charriez</option>
+            <option value="EDDIE PEREZ">Eddie Perez</option>
           </select>
         </div>
       </div>

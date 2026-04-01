@@ -215,7 +215,7 @@ function getMockDashboardData(errorMessage?: string): DashboardData {
       avgBackEnd: 1191,
       totalGrossGoal: 150000,
       bonusEligibleCount: 4,
-      teamSize: 7,
+      teamSize: 9,
     },
 
     salespeople: [
